@@ -366,13 +366,14 @@ class Object_detect():
 # The path to save the image folder
 def parse_folder(folder):
     restore = []
-    path1 = '/home/er/AiKit_280PI/' + folder
+    path = ''
+    path1 = '/home/er/aikit_V2/AiKit_280PI/' + folder
     path2 = r'D:/BaiduSyncdisk/PythonProject/OpenCV/' + folder
 
-    # if os.path.exists(path1):
-    #     path = path1
-    # elif os.path.exists(path2):
-    path = path1
+    if os.path.exists(path1):
+        path = path1
+    elif os.path.exists(path2):
+        path = path2
 
     for i, j, k in os.walk(path):
         for l in k:
@@ -415,10 +416,10 @@ def process_transform_frame(frame, x1, y1, x2, y2):
                         fx=fx,
                         fy=fy,
                         interpolation=cv2.INTER_CUBIC)
-    # if x1 != x2:
-    #     # the cutting ratio here is adjusted according to the actual situation
-    #    frame = frame[int(y2 * 0.2):int(y1 * 1.15),
-    #                    int(x1 * 0.7):int(x2 * 1.15)]
+    if x1 != x2:
+        # the cutting ratio here is adjusted according to the actual situation
+       frame = frame[int(y2 * 0.7):int(y1 * 1.15),
+                       int(x1 * 0.7):int(x2 * 1.15)]
     return frame
 
 def process_display_frame(connection):
