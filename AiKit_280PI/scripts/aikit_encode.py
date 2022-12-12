@@ -2,9 +2,9 @@
 import cv2
 import numpy as np
 from pymycobot.mycobot import MyCobot
-from pymycobot import PI_BAUD, PI_PORT
 import RPi.GPIO as GPIO
 import time
+import os
 
 
 
@@ -15,13 +15,38 @@ pump_x = 15
 
 class Detect_marker():
     def __init__(self):
-        #initialize MyCobot
-        self.mc = MyCobot(PI_PORT, PI_BAUD) 
-        GPIO.setmode(GPIO.BCM)
-        # GPIO.setup(20, GPIO.OUT)
-        GPIO.setup(21, GPIO.OUT)
+        
         # set cache of real coord
         self.cache_x = self.cache_y = 0
+        
+        # which robot: USB* is m5; ACM* is wio; AMA* is raspi
+        self.robot_m5 = os.popen("ls /dev/ttyUSB*").readline()[:-1]
+        self.robot_wio = os.popen("ls /dev/ttyACM*").readline()[:-1]
+        self.robot_raspi = os.popen("ls /dev/ttyAMA*").readline()[:-1]
+        self.robot_jes = os.popen("ls /dev/ttyTHS1").readline()[:-1]
+        self.raspi = False
+        
+        if "dev" in self.robot_m5:
+            self.Pin = [2, 5]
+        elif "dev" in self.robot_wio:
+            # self.Pin = [20, 21]
+            self.Pin = [2, 5]
+
+            # for i in self.move_coords:
+            #     i[2] -= 20
+        elif "dev" in self.robot_raspi or "dev" in self.robot_jes:
+            import RPi.GPIO as GPIO
+            GPIO.setwarnings(False)
+            self.GPIO = GPIO
+            GPIO.setmode(GPIO.BCM)
+            GPIO.setup(20, GPIO.OUT)
+            GPIO.setup(21, GPIO.OUT)
+            GPIO.output(20, 1)
+            GPIO.output(21, 1)
+            self.raspi = True
+        if self.raspi:
+            self.pub_pump(False)
+        
         # Creating a Camera Object
         cap_num = 0
         self.cap = cv2.VideoCapture(cap_num)
@@ -44,17 +69,22 @@ class Detect_marker():
     # 控制吸泵      
     def pub_pump(self, flag):
         if flag:
-           # GPIO.output(20, 0)
+            GPIO.output(20, 0)
             GPIO.output(21, 0)
         else:
-           # GPIO.output(20, 1)
+            GPIO.output(20, 1)
             GPIO.output(21, 1)
 
     # Grasping motion
     def move(self, x, y):
+        
+        angles = [
+            [0.61, 45.87, -92.37, -41.3, 2.02, 9.58], # init to point
+            [18.8, -7.91, -54.49, -23.02, -0.79, -14.76],
+        ]
 
         coords = [
-            [135.0, -65.5, 280.1, 178.99, 5.38, -179.9], # 初始化点 init point
+            [145.0, -65.5, 280.1, 178.99, 7.67, -179.9], # 初始化点 init point
             [132.2, -136.9, 200.8, -178.24, -3.72, -107.17],  # D分拣区 D sorting area
             [238.8, -124.1, 204.3, -169.69, -5.52, -96.52], # C分拣区 C sorting area
             [115.8, 177.3, 210.6, 178.06, -0.92, -6.11], # A分拣区 A sorting area
@@ -62,22 +92,42 @@ class Detect_marker():
         ]
 
         # send coordinates to move mycobot
-        self.mc.send_coords(coords[0], 30, 1)
+        self.mc.send_angles(angles[1], 25)
+        time.sleep(3)
+        
+        # self.mc.send_coords([coords[0][0]+x, coords[0][1]+y, 240, 178.99, 5.38, -179.9], 20, 0)
+        # time.sleep(2)
+        self.mc.send_coords([coords[0][0]+x, coords[0][1]+y, 200, 178.99, -3.78, -62.9], 25, 0)
         time.sleep(2)
-        self.mc.send_coords([coords[0][0]+x, coords[0][1]+y, 240, 178.99, 5.38, -179.9], 20, 0)
-        time.sleep(2)
-        self.mc.send_coords([coords[0][0]+x, coords[0][1]+y, 200, 178.99, 5.38, -179.9], 20, 0)
-        time.sleep(2)
-        self.mc.send_coords([coords[0][0]+x, coords[0][1]+y, 105, 178.99, 5.38, -179.9], 20, 0)
+        self.mc.send_coords([coords[0][0]+x, coords[0][1]+y, 105, 178.99, -3.78, -62.9], 25, 0)
         time.sleep(3.5)
-        self.pub_pump(True)
-        self.mc.send_coords(coords[0], 30, 1)
+        
+        # open pump
+        if "dev" in self.robot_raspi:
+            self.pub_pump(True)
+        time.sleep(1.5)
+        
+        tmp = []
+        while True:
+            if not tmp: 
+                tmp = self.mc.get_angles()    
+            else:
+                break
+        time.sleep(0.5)
+        
+        # print(tmp)
+        self.mc.send_angles([tmp[0], -0.71, -54.49, -23.02, -0.79, tmp[5]],25) # [18.8, -7.91, -54.49, -23.02, -0.79, -14.76]
+        time.sleep(3)
+        # 抓取后放置区域
+        self.mc.send_coords(coords[1], 25, 1) # coords[1] 为D分拣区，coords[2] 为C分拣区，coords[3] 为A分拣区，coords[4] 为B分拣区
         time.sleep(4)
-        self.mc.send_coords(coords[1], 30, 1)
-        time.sleep(4)
-        self.pub_pump(False)  
+        
+        # close pump
+        if "dev" in self.robot_raspi:
+            self.pub_pump(False)
         time.sleep(5)
-        self.mc.send_coords(coords[0], 30, 1)
+        
+        self.mc.send_angles(angles[0], 25)
         time.sleep(2)
 
     # decide whether grab cube
@@ -91,14 +141,20 @@ class Detect_marker():
         else:
             self.cache_x = self.cache_y = 0
             # 调整吸泵吸取位置，y增大,向左移动;y减小,向右移动;x增大,前方移动;x减小,向后方移动
-            self.move(x-10, y+145)
+            self.move(x-5, y+145)
 
     # init mycobot
     def init_mycobot(self):
+        if "dev" in self.robot_raspi:
+            self.mc = MyCobot(self.robot_raspi, 1000000)
+        elif "dev" in self.robot_m5:
+            self.mc = MyCobot(self.robot_m5, 115200)
+        elif "dev" in self.robot_wio:
+            self.mc = MyCobot(self.robot_wio, 115200)
         self.pub_pump(False)
         self.mc.send_angles([0.61, 45.87, -92.37, -41.3, 2.02, 9.58], 20)
         # self.mc.send_coords([135.0, -65.5, 280.1, 178.99, 5.38, -179.9], 20, 1)
-        time.sleep(4.5)
+        time.sleep(3.5)
         
 
 
@@ -132,7 +188,7 @@ class Detect_marker():
                     # calculate the coordinates of the aruco relative to the pump
                     xyz = [round(xyz[0]*1000+pump_y, 2), round(xyz[1]*1000+pump_x, 2), round(xyz[2]*1000, 2)]
 
-                    cv2.putText(img, 'coords' + str(xyz), (0, 64), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
+                    cv2.putText(img, str(xyz[:2]), (0, 64), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
                     for i in range(rvec.shape[0]):
 			# draw the aruco on img
                         cv2.aruco.drawDetectedMarkers(img, corners)
