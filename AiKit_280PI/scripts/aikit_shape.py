@@ -46,8 +46,8 @@ class Object_detect():
             # self.Pin = [20, 21]
             self.Pin = [2, 5]
 
-            for i in self.move_coords:
-                i[2] -= 20
+            # for i in self.move_coords:
+            #     i[2] -= 20
         elif "dev" in self.robot_raspi or "dev" in self.robot_jes:
             import RPi.GPIO as GPIO
             GPIO.setwarnings(False)
@@ -68,15 +68,6 @@ class Object_detect():
         self.x1 = self.x2 = self.y1 = self.y2 = 0
         # set cache of real coord
         self.cache_x = self.cache_y = 0
-        # set color HSV
-        self.HSV = {
-            # "yellow": [np.array([11, 85, 70]), np.array([59, 255, 245])],
-            "yellow": [np.array([22, 93, 0]), np.array([45, 255, 245])],
-            "red": [np.array([0, 43, 46]), np.array([8, 255, 255])],
-            "green": [np.array([35, 43, 35]), np.array([90, 255, 255])],
-            "blue": [np.array([100, 43, 46]), np.array([124, 255, 255])],
-            "cyan": [np.array([78, 43, 46]), np.array([99, 255, 255])],
-        }
  
         # use to calculate coord between cube and mycobot
         self.sum_x1 = self.sum_x2 = self.sum_y2 = self.sum_y1 = 0
@@ -97,23 +88,23 @@ class Object_detect():
     # pump_control pi
     def gpio_status(self, flag):
         if flag:
-            # self.GPIO.output(20, 0)
+            self.GPIO.output(20, 0)
             self.GPIO.output(21, 0)
         else:
-            # self.GPIO.output(20, 1)
+            self.GPIO.output(20, 1)
             self.GPIO.output(21, 1)
     
     # 开启吸泵 m5
     def pump_on(self):
         # 让2号位工作
-        # self.mc.set_basic_output(2, 0)
+        self.mc.set_basic_output(2, 0)
         # 让5号位工作
         self.mc.set_basic_output(5, 0)
 
     # 停止吸泵 m5
     def pump_off(self):
         # 让2号位停止工作
-        # self.mc.set_basic_output(2, 1)
+        self.mc.set_basic_output(2, 1)
         # 让5号位停止工作
         self.mc.set_basic_output(5, 1)
 
@@ -125,7 +116,7 @@ class Object_detect():
         time.sleep(3)
 
         # send coordinates to move mycobot
-        self.mc.send_coords([x, y,  190.6, 179.87, -3.78, -62.75], 25, 1) # usb :rx,ry,rz -173.3, -5.48, -57.9
+        self.mc.send_coords([x, y,  170.6, 179.87, -3.78, -62.75], 25, 1) # usb :rx,ry,rz -173.3, -5.48, -57.9
         time.sleep(3)
         
         # self.mc.send_coords([x, y, 150, 179.87, -3.78, -62.75], 25, 0)
@@ -151,7 +142,7 @@ class Object_detect():
         
         # print(tmp)
         self.mc.send_angles([tmp[0], -0.71, -54.49, -23.02, -0.79, tmp[5]],25) # [18.8, -7.91, -54.49, -23.02, -0.79, -14.76]
-        time.sleep(2.5)
+        time.sleep(3)
 
         self.mc.send_coords(self.move_coords[color], 25, 1)
  
@@ -299,8 +290,6 @@ class Object_detect():
         # 检测物体边框
         contours,_ = cv2.findContours(
             edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-        
-
 
         if len(contours)>0:
             for cnt in contours:
