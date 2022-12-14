@@ -131,7 +131,7 @@ class Object_detect():
 
     # decide whether grab cube 决定是否抓取立方体
     def decide_move(self, x, y, color):
-        print('decide-->',x, y, self.cache_x, self.cache_y)
+        print(x, y, self.cache_x, self.cache_y)
         # detect the cube status move or run 检测立方体状态移动或运行
         if (abs(x - self.cache_x) + abs(y - self.cache_y)) / 2 > 5:  # mm
             self.cache_x, self.cache_y = x, y

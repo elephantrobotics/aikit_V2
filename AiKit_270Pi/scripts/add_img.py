@@ -52,7 +52,7 @@ def take_photo():
 
 def cut_photo():
     
-    path1 = '/home/er/AiKit_270Pi'    # pi
+    path1 = '/home/er/aikit_V2/AiKit_270Pi'    # pi
     path2 = r'D:/BaiduSyncdisk/PythonProject/OpenCV'         # m5
 
     if os.path.exists(path1):
@@ -63,19 +63,19 @@ def cut_photo():
         print("invalid file path! Please check whether the file path exists or modify it!")
 
 
-    path_red = path + '/res/red'
+    path_red = path + '/res/A'
     for i, j, k in os.walk(path_red):
         file_len_red = len(k)
 
-    path_gray = path + '/res/gray'
+    path_gray = path + '/res/B'
     for i, j, k in os.walk(path_gray):
         file_len_gray = len(k)
 
-    path_green = path + '/res/green'
+    path_green = path + '/res/C'
     for i, j, k in os.walk(path_green):
         file_len_green = len(k)
 
-    path_blue = path + '/res/blue'
+    path_blue = path + '/res/D'
     for i, j, k in os.walk(path_blue):
         file_len_blue = len(k)
     print("请截取要识别的部分(Please intercept the part to be identified)")
@@ -101,10 +101,10 @@ def cut_photo():
 
     msg = """\
     Image save location:
-        1 - Save to red folder
-        2 - Save to gray folder
-        3 - Save to green folder
-        4 - Save to blue folder
+        1 - 保存至A分拣区文件夹 Save to A folder 
+        2 - 保存至B分拣区文件夹 Save to B folder 
+        3 - 保存至C分拣区文件夹 Save to C folder 
+        4 - 保存至D分拣区文件夹 Save to D folder
         """
     print(msg)
     kw = int(input("请输入保存图片文件夹数字编号（Please enter the number of the folder to save the picture）:"))
@@ -114,22 +114,22 @@ def cut_photo():
     if roi != (0, 0, 0, 0):
         
         crop = cut[y:y + h, x:x + w]
-        cv2.imshow('crop', crop)
+        # cv2.imshow('crop', crop)
         # 选择红桶文件夹
         if kw == 1:
-            cv2.imwrite(path + '/res/red/goal{}.jpeg'.format(str(file_len_red + 1)),crop)
+            cv2.imwrite(path + '/res/A/goal{}.jpeg'.format(str(file_len_red + 1)),crop)
             print('Saved')
         # 选择灰桶文件夹
         elif kw == 2:
-            cv2.imwrite(path + '/res/gray/goal{}.jpeg'.format(str(file_len_gray+1)),crop)
+            cv2.imwrite(path + '/res/B/goal{}.jpeg'.format(str(file_len_gray+1)),crop)
             print('Saved')
         # 选择绿桶文件夹
         elif kw == 3:
-            cv2.imwrite(path + '/res/green/goal{}.jpeg'.format(str(file_len_green+1)),crop)
+            cv2.imwrite(path + '/res/C/goal{}.jpeg'.format(str(file_len_green+1)),crop)
             print('Saved')
         # 选择蓝桶文件夹
         elif kw == 4:
-            cv2.imwrite(path + '/res/blue/goal{}.jpeg'.format(str(file_len_blue+1)),crop)
+            cv2.imwrite(path + '/res/D/goal{}.jpeg'.format(str(file_len_blue+1)),crop)
             print('Saved')
 
     # 退出

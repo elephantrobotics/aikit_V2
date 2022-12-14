@@ -45,8 +45,8 @@ class Object_detect():
             # self.Pin = [20, 21]
             self.Pin = [2, 5]
 
-            for i in self.move_coords:
-                i[2] -= 20
+            # for i in self.move_coords:
+            #     i[2] -= 20
         elif "dev" in self.robot_raspi or "dev" in self.robot_jes:
             import RPi.GPIO as GPIO
             GPIO.setwarnings(False)
@@ -83,7 +83,7 @@ class Object_detect():
     # pump_control pi
     def gpio_status(self, flag):
         if flag:
-            # self.GPIO.output(20, 0)
+            self.GPIO.output(20, 0)
             self.GPIO.output(21, 0)
         else:
             # self.GPIO.output(20, 1)
@@ -92,20 +92,20 @@ class Object_detect():
     # 开启吸泵 m5
     def pump_on(self):
         # 让2号位工作
-        # self.mc.set_basic_output(2, 0)
+        self.mc.set_basic_output(2, 0)
         # 让5号位工作
         self.mc.set_basic_output(5, 0)
 
     # 停止吸泵 m5
     def pump_off(self):
         # 让2号位停止工作
-        # self.mc.set_basic_output(2, 1)
+        self.mc.set_basic_output(2, 1)
         # 让5号位停止工作
         self.mc.set_basic_output(5, 1)
 
     # Grasping motion
     def move(self, x, y, color):
-        # send Angle to move mypal260
+        # send Angle to move mecharm 270
         self.mc.send_angles(self.move_angles[0], 50)
         time.sleep(2)
 
@@ -117,7 +117,7 @@ class Object_detect():
         # time.sleep(3)
 
         # self.mc.send_coords([x, y, 105, 179.87, -3.78, -62.75], 25, 0)
-        self.mc.send_coords([x, y, 110, -176.1, 2.4, -125.1], 30, 0)
+        self.mc.send_coords([x, y, 70, -176.1, 2.4, -125.1], 30, 0)
         
         time.sleep(4)
 
@@ -367,13 +367,14 @@ class Object_detect():
 # The path to save the image folder
 def parse_folder(folder):
     restore = []
-    path1 = '/home/er/AiKit_270Pi/' + folder
+    path = ''
+    path1 = '/home/er/aikit_V2/AiKit_270Pi/' + folder
     path2 = r'D:/BaiduSyncdisk/PythonProject/OpenCV/' + folder
 
-    # if os.path.exists(path1):
-    #     path = path1
-    # elif os.path.exists(path2):
-    path = path1
+    if os.path.exists(path1):
+        path = path1
+    elif os.path.exists(path2):
+        path = path1
 
     for i, j, k in os.walk(path):
         for l in k:
@@ -416,10 +417,10 @@ def process_transform_frame(frame, x1, y1, x2, y2):
                         fx=fx,
                         fy=fy,
                         interpolation=cv2.INTER_CUBIC)
-    # if x1 != x2:
-    #     # the cutting ratio here is adjusted according to the actual situation
-    #    frame = frame[int(y2 * 0.2):int(y1 * 1.15),
-    #                    int(x1 * 0.7):int(x2 * 1.15)]
+    if x1 != x2:
+        # the cutting ratio here is adjusted according to the actual situation
+       frame = frame[int(y2 * 0.7):int(y1 * 1.15),
+                       int(x1 * 0.7):int(x2 * 1.15)]
     return frame
 
 def process_display_frame(connection):
@@ -470,10 +471,10 @@ def run():
     child.start()
 
     res_queue = [[], [], [], []]
-    res_queue[0] = parse_folder('res/red')
-    res_queue[1] = parse_folder('res/green')
-    res_queue[2] = parse_folder('res/blue')
-    res_queue[3] = parse_folder('res/gray')
+    res_queue[0] = parse_folder('res/D')
+    res_queue[1] = parse_folder('res/C')
+    res_queue[2] = parse_folder('res/A')
+    res_queue[3] = parse_folder('res/B')
 
     #sift = cv2.xfeatures2d.SIFT_create()
     sift = cv2.SIFT_create()
