@@ -124,6 +124,9 @@ class Detect_marker():
             if not success:
                 print("It seems that the image cannot be acquired correctly.")
                 break
+            
+            img = cv.resize(img, None, fx=1.5, fy=1.5, interpolation=cv.INTER_CUBIC)
+            img = img[140:630, 240:730]
 
             # transfrom the img to model of gray
             gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)

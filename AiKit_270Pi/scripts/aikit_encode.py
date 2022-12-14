@@ -179,6 +179,9 @@ class Detect_marker():
             if not success:
                 print("It seems that the image cannot be acquired correctly.")
                 break
+            
+            img = cv2.resize(img, None, fx=1.5, fy=1.5, interpolation=cv2.INTER_CUBIC)
+            img = img[140:630, 240:730]
 
             # transfrom the img to model of gray
             gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -210,7 +213,7 @@ class Detect_marker():
                     # calculate the coordinates of the aruco relative to the pump
                     xyz = [round(xyz[0]*1000+pump_y, 2), round(xyz[1]*1000+pump_x, 2), round(xyz[2]*1000, 2)]
 
-                    cv2.putText(img, str(xyz[:2]), (0, 64), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
+                    # cv2.putText(img, str(xyz[:2]), (0, 64), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
                     for i in range(rvec.shape[0]):
 			# draw the aruco on img
                         cv2.aruco.drawDetectedMarkers(img, corners)
