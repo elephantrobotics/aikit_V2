@@ -310,7 +310,7 @@ def parse_folder(folder):
     path1 = '/home/ubuntu/catkin_ws/src/mycobot_ros/mycobot_ai/ai_mypalletizer_260/' + folder
     # path2 = r'D:/BaiduSyncdisk/PythonProject/OpenCV/' + folder
     # path2 = img_path + '/' + folder
-    path2 = r'D:\heyuxuan\File\AiKit\AiKit_260M5/' + folder
+    path2 = r'D:\heyuxuan\File\AiKit\aikit_V2\AiKit_260M5/' + folder
     print(path2)
 
     # if os.path.exists(path1):
