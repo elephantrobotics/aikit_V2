@@ -2,6 +2,8 @@ import cv2 as cv
 import numpy as np
 from pymycobot.mypalletizer import MyPalletizer
 import time
+import serial
+import serial.tools.list_ports
 
 
 # y轴偏移量
@@ -10,13 +12,19 @@ pump_y = -45
 pump_x = -30
 
 class Detect_marker():
-    def __init__(self, port, baud):
+    def __init__(self):
+        
+        # get real serial
+        self.plist = [
+            str(x).split(" - ")[0].strip() for x in serial.tools.list_ports.comports()
+        ]
+        
         #initialize MyCobot
-        self.mc = MyPalletizer(port, baud)
+        self.mc = None
         # set cache of real coord
         self.cache_x = self.cache_y = 0
         # Creating a Camera Object
-        cap_num = 0
+        cap_num = 1
         self.cap = cv.VideoCapture(cap_num)
         
         # choose place to set cube
@@ -107,10 +115,11 @@ class Detect_marker():
         else:
             self.cache_x = self.cache_y = 0
             # 调整吸泵吸取位置，y增大,向左移动;y减小,向右移动;x增大,前方移动;x减小,向后方移动
-            self.move(x+20, y+88, color)
+            self.move(x+40, y+88, color)
 
     # init mycobot
     def init_mycobot(self):
+        self.mc = MyPalletizer(self.plist[0], 115200)
         self.pub_pump(False)
         self.mc.send_angles([-29.0, 5.88, -4.92, -76.28], 30)
         time.sleep(2)
@@ -125,9 +134,6 @@ class Detect_marker():
                 print("It seems that the image cannot be acquired correctly.")
                 break
             
-            img = cv.resize(img, None, fx=1.5, fy=1.5, interpolation=cv.INTER_CUBIC)
-            img = img[140:630, 240:730]
-
             # transfrom the img to model of gray
             gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
             # Detect ArUco marker.
@@ -174,5 +180,5 @@ class Detect_marker():
             cv.imshow("encode_image", img)
 
 if __name__ == "__main__":
-    detect = Detect_marker("COM3", 115200)
+    detect = Detect_marker()
     detect.run()

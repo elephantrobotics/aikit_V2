@@ -2,6 +2,8 @@ import cv2
 import numpy as np
 import time
 import os,sys
+import serial
+import serial.tools.list_ports
 
 from pymycobot.mypalletizer import MyPalletizer
 
@@ -18,6 +20,11 @@ class Object_detect():
         super(Object_detect, self).__init__()
         # declare mypal260
         self.mc = None
+        
+        # get real serial
+        self.plist = [
+            str(x).split(" - ")[0].strip() for x in serial.tools.list_ports.comports()
+        ]
 
         # 移动角度
         self.move_angles = [
@@ -41,8 +48,8 @@ class Object_detect():
         self.cache_x = self.cache_y = 0
         # set color HSV
         self.HSV = {
-            # "yellow": [np.array([11, 85, 70]), np.array([59, 255, 245])],
-            "yellow": [np.array([22, 93, 0]), np.array([45, 255, 245])],
+            "yellow": [np.array([11, 85, 70]), np.array([59, 255, 245])],
+            # "yellow": [np.array([22, 93, 0]), np.array([45, 255, 245])],
             "red": [np.array([0, 43, 46]), np.array([8, 255, 255])],
             "green": [np.array([35, 43, 35]), np.array([90, 255, 255])],
             "blue": [np.array([100, 43, 46]), np.array([124, 255, 255])],
@@ -144,7 +151,7 @@ class Object_detect():
     # init mypal260
     def run(self):
      
-        self.mc = MyPalletizer("COM3", 115200)
+        self.mc = MyPalletizer(self.plist[0], 115200)
         self.mc.send_angles([-29.0, 5.88, -4.92, -76.28], 20)
         time.sleep(3)
 
@@ -192,7 +199,6 @@ class Object_detect():
                 point_1, point_2, point_3, point_4 = corners[1][0]
                 x2, y2 = int((point_1[0] + point_2[0] + point_3[0] + point_4[0]) / 4.0), int(
                     (point_1[1] + point_2[1] + point_3[1] + point_4[1]) / 4.0)
-                print('aruco:',x1,y1, x2,y2)
                 return x1, x2, y1, y2
         return None
 
@@ -202,7 +208,7 @@ class Object_detect():
         self.y1 = int(y1)
         self.x2 = int(x2)
         self.y2 = int(y2)
-        print('cut-->',self.x1, self.y1, self.x2, self.y2)
+        
 
     # set parameters to calculate the coords between cube and mypal260
     # 设置参数以计算立方体和 mycobot 之间的坐标
@@ -316,7 +322,6 @@ class Object_detect():
         
         # 判断是否正常识别
         if abs(x) + abs(y) > 0:
-            print('xy>0')
             return x, y
         else:
             return None

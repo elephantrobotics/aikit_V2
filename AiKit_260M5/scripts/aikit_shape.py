@@ -2,6 +2,8 @@ import cv2
 import numpy as np
 import time
 import os,sys
+import serial
+import serial.tools.list_ports
 import math
 from pymycobot.mypalletizer import MyPalletizer
 
@@ -16,6 +18,12 @@ class Object_detect():
     def __init__(self, camera_x = 160, camera_y = 10):
         # inherit the parent class
         super(Object_detect, self).__init__()
+        
+        # get real serial
+        self.plist = [
+            str(x).split(" - ")[0].strip() for x in serial.tools.list_ports.comports()
+        ]
+        
         # declare mypal260
         self.mc = None
 
@@ -123,7 +131,7 @@ class Object_detect():
     # init mypal260
     def run(self):
      
-        self.mc = MyPalletizer("COM3", 115200)
+        self.mc = MyPalletizer(self.plist[0], 115200)
         self.mc.send_angles([-29.0, 5.88, -4.92, -76.28], 20)
         time.sleep(3)
 

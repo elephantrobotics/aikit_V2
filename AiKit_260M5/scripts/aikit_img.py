@@ -3,6 +3,8 @@ import cv2
 import numpy as np
 import time
 import os,sys
+import serial
+import serial.tools.list_ports
 from pymycobot.mypalletizer import MyPalletizer
 
 IS_CV_4 = cv2.__version__[0] == '4'
@@ -11,10 +13,14 @@ __version__ = "1.0"  # Adaptive seeed
 
 class Object_detect():
 
-    def __init__(self, camera_x = 160, camera_y = 10):
+    def __init__(self, camera_x = 165, camera_y = 10):
         # inherit the parent class
         super(Object_detect, self).__init__()
 
+        # get real serial
+        self.plist = [
+            str(x).split(" - ")[0].strip() for x in serial.tools.list_ports.comports()
+        ]
         # declare mypal260
         self.mc = None
         # 移动角度
@@ -111,14 +117,12 @@ class Object_detect():
         else:
             self.cache_x = self.cache_y = 0
             # 调整吸泵吸取位置，y增大,向左移动;y减小,向右移动;x增大,前方移动;x减小,向后方移动
-            print('start...')
             self.move(x, y, color)
-            print('end....')
 
     # init mypal260
     def run(self):
     
-        self.mc = MyPalletizer("COM3", 115200)
+        self.mc = MyPalletizer(self.plist[0], 115200)
       
         self.mc.send_angles([-29.0, 5.88, -4.92, -76.28], 20)
         time.sleep(3)
@@ -309,9 +313,9 @@ def parse_folder(folder):
     img_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     path1 = '/home/ubuntu/catkin_ws/src/mycobot_ros/mycobot_ai/ai_mypalletizer_260/' + folder
     # path2 = r'D:/BaiduSyncdisk/PythonProject/OpenCV/' + folder
-    # path2 = img_path + '/' + folder
-    path2 = r'D:\heyuxuan\File\AiKit\aikit_V2\AiKit_260M5/' + folder
-    print(path2)
+    path2 = img_path + '/' + folder
+    # path2 = r'D:\heyuxuan\File\AiKit\aikit_V2\AiKit_260M5/' + folder
+    # print(path2)
 
     # if os.path.exists(path1):
     #     path = path1
@@ -359,10 +363,10 @@ def process_transform_frame(frame, x1, y1, x2, y2):
                         fx=fx,
                         fy=fy,
                         interpolation=cv2.INTER_CUBIC)
-    # if x1 != x2:
-    #     # the cutting ratio here is adjusted according to the actual situation
-    #    frame = frame[int(y2 * 0.2):int(y1 * 1.15),
-    #                    int(x1 * 0.7):int(x2 * 1.15)]
+    if x1 != x2:
+        # the cutting ratio here is adjusted according to the actual situation
+       frame = frame[int(y2 * 0.7):int(y1 * 1.15),
+                       int(x1 * 0.7):int(x2 * 1.15)]
     return frame
 
 def process_display_frame(connection):
