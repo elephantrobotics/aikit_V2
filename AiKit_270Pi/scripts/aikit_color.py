@@ -14,7 +14,7 @@ __version__ = "1.0"
 
 class Object_detect():
 
-    def __init__(self, camera_x = 142, camera_y = 7):
+    def __init__(self, camera_x = 145, camera_y = 7):
         # inherit the parent class
         super(Object_detect, self).__init__()
         # declare mecharm 270
@@ -28,10 +28,10 @@ class Object_detect():
 
         # 移动坐标
         self.move_coords = [
-            [96.5, -101.9, 185.6, 155.25, 19.14, 75.88], # above the red bucket
-            [180.9, -99.3, 184.6, 124.4, 30.9, 80.58], # above the green bucket
-            [2.2, 128.5, 171.6, 163.27, 10.58, -147.25], # blue
-            [77.4, 122.1, 179.2, 151.66, 17.94, 178.24] # above the yellow bucket
+            [96.5, -101.9, 185.6, 155.25, 19.14, 75.88], # D Sorting area
+            [180.9, -99.3, 184.6, 124.4, 30.9, 80.58], # C Sorting area
+            [77.4, 122.1, 179.2, 151.66, 17.94, 178.24], # A Sorting area
+            [2.2, 128.5, 171.6, 163.27, 10.58, -147.25], # B Sorting area
         ]
         
         # which robot: USB* is m5; ACM* is wio; AMA* is raspi
@@ -69,6 +69,8 @@ class Object_detect():
         self.cache_x = self.cache_y = 0
         # set color HSV
         self.HSV = {
+            # "yellow": [np.array([11, 85, 70]), np.array([59, 255, 245])],
+            # "yellow": [np.array([22, 93, 0]), np.array([45, 255, 245])],
             "yellow": [np.array([26, 43, 46]), np.array([34, 255, 255])],
             "red": [np.array([0, 43, 46]), np.array([8, 255, 255])],
             "green": [np.array([35, 43, 35]), np.array([90, 255, 255])],
@@ -121,8 +123,6 @@ class Object_detect():
 
     # Grasping motion
     def move(self, x, y, color):
-        # self.mc.set_free_mode(0)
-        time.sleep(1)
         # send Angle to move mecharm270
         print(color)
         self.mc.send_angles(self.move_angles[1], 50)
@@ -156,12 +156,12 @@ class Object_detect():
         
         # print(tmp)
         self.mc.send_angles([tmp[0], 17.22, -32.51, tmp[3], 97, tmp[5]],30) # [18.8, -7.91, -54.49, -23.02, -0.79, -14.76]
-        time.sleep(3.5)
-        print(self.move_coords[color])
+        time.sleep(3)
+
         self.mc.send_coords(self.move_coords[color], 30, 0)
         # self.pub_marker(self.move_coords[color][0]/1000.0, self.move_coords[color]
         #                 [1]/1000.0, self.move_coords[color][2]/1000.0)
-        time.sleep(5.5)
+        time.sleep(3)
        
         # close pump
  

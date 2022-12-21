@@ -14,7 +14,7 @@ __version__ = "1.0"
 
 class Object_detect():
 
-    def __init__(self, camera_x = 142, camera_y = 10):
+    def __init__(self, camera_x = 150, camera_y = 5):
         # inherit the parent class
         super(Object_detect, self).__init__()
         # declare mecharm270
@@ -112,17 +112,17 @@ class Object_detect():
     def move(self, x, y, color):
         # send Angle to move mecharm270
         print(color)
-        self.mc.send_angles(self.move_angles[0], 25)
+        self.mc.send_angles(self.move_angles[0], 30)
         time.sleep(3)
 
         # send coordinates to move mycobot
-        self.mc.send_coords([x, y,  110, -176.1, 2.4, -125.1], 25, 1) # usb :rx,ry,rz -173.3, -5.48, -57.9
+        self.mc.send_coords([x, y,  110, -176.1, 2.4, -125.1], 30, 0) # usb :rx,ry,rz -173.3, -5.48, -57.9
         time.sleep(3)
         
         # self.mc.send_coords([x, y, 150, 179.87, -3.78, -62.75], 25, 0)
         # time.sleep(3)
 
-        self.mc.send_coords([x, y, 70, -176.1, 2.4, -125.1], 25, 0)
+        self.mc.send_coords([x, y, 70, -176.1, 2.4, -125.1], 30, 0)
         time.sleep(3)
 
         # open pump
@@ -141,10 +141,10 @@ class Object_detect():
         time.sleep(0.5)
         
         # print(tmp)
-        self.mc.send_angles([tmp[0], 17.22, -32.51, tmp[3], 97, tmp[5]],25) # [18.8, -7.91, -54.49, -23.02, -0.79, -14.76]
+        self.mc.send_angles([tmp[0], 17.22, -32.51, tmp[3], 97, tmp[5]],30) # [18.8, -7.91, -54.49, -23.02, -0.79, -14.76]
         time.sleep(2.5)
 
-        self.mc.send_coords(self.move_coords[color], 25, 1)
+        self.mc.send_coords(self.move_coords[color], 30, 0)
  
         time.sleep(3)
        
@@ -156,7 +156,7 @@ class Object_detect():
             self.gpio_status(False)
         time.sleep(5)
 
-        self.mc.send_angles(self.move_angles[1], 25)
+        self.mc.send_angles(self.move_angles[1], 30)
         time.sleep(3)
 
     # decide whether grab cube
@@ -182,7 +182,7 @@ class Object_detect():
             self.mc = MyCobot(self.robot_raspi, 1000000)
         if not self.raspi:
             self.pub_pump(False, self.Pin)
-        self.mc.send_angles([-33.31, 2.02, -10.72, -0.08, 95, -54.84], 20)
+        self.mc.send_angles([-33.31, 2.02, -10.72, -0.08, 95, -54.84], 30)
         time.sleep(3)
 
     # draw aruco
@@ -259,8 +259,8 @@ class Object_detect():
                            interpolation=cv2.INTER_CUBIC)
         if self.x1 != self.x2:
             # the cutting ratio here is adjusted according to the actual situation
-            frame = frame[int(self.y2*0.72):int(self.y1*1.12),
-                          int(self.x1*0.85):int(self.x2*1.1)]
+            frame = frame[int(self.y2*0.78):int(self.y1*1.1),
+                          int(self.x1*0.86):int(self.x2*1.08)]
         return frame
     
     # 检测物体的形状

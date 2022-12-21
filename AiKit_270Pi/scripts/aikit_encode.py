@@ -100,7 +100,7 @@ class Detect_marker():
         ]
 
         # send coordinates to move mycobot
-        self.mc.send_angles(angles[1], 25)
+        self.mc.send_angles(angles[0], 30)
         time.sleep(3)
         #self.mc.send_coords([coords[0][0]+x, -(coords[0][1]+y), 200, -178.9, -1.57, -66], 30, 0)
         #time.sleep(3.5)
@@ -112,7 +112,7 @@ class Detect_marker():
         self.mc.send_coords([coords[0][0]+x, coords[0][1]+y, 150, 172.36, 5.36, 125.58], 30, 0)
         time.sleep(3)
         self.mc.send_coords([coords[0][0]+x, coords[0][1]+y, 70, 172.36, 5.36, 125.58], 30, 0)
-        time.sleep(3.5)
+        time.sleep(3)
         
         # open pump
         if "dev" in self.robot_raspi:
@@ -153,7 +153,7 @@ class Detect_marker():
         else:
             self.cache_x = self.cache_y = 0
             # 调整吸泵吸取位置，y增大,向左移动;y减小,向右移动;x增大,前方移动;x减小,向后方移动
-            self.move(x+38, y+138, color)
+            self.move(x+50, y+130, color)
 
     # init mycobot
     def init_mycobot(self):
@@ -165,7 +165,7 @@ class Detect_marker():
             self.mc = MyCobot(self.robot_wio, 115200)
         self.pub_pump(False)
         
-        self.mc.send_angles([-33.31, 2.02, -10.72, -0.08, 95, -54.84], 20)
+        self.mc.send_angles([-33.31, 2.02, -10.72, -0.08, 95, -54.84], 30)
         time.sleep(2.5)
         
 
@@ -180,8 +180,7 @@ class Detect_marker():
                 print("It seems that the image cannot be acquired correctly.")
                 break
             
-            img = cv2.resize(img, None, fx=1.5, fy=1.5, interpolation=cv2.INTER_CUBIC)
-            img = img[140:630, 240:730]
+           
 
             # transfrom the img to model of gray
             gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -217,14 +216,6 @@ class Detect_marker():
                     for i in range(rvec.shape[0]):
 			# draw the aruco on img
                         cv2.aruco.drawDetectedMarkers(img, corners)
-                        cv2.aruco.drawAxis(
-                            img,
-                            self.camera_matrix,
-                            self.dist_coeffs,
-                            rvec[i, :, :],
-                            tvec[i, :, :],
-                            0.03,
-                        )
 
                         if num < 40 :
                             sum_x += xyz[1]

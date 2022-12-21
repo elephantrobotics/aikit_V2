@@ -14,7 +14,7 @@ __version__ = "1.0"
 
 class Object_detect():
 
-    def __init__(self, camera_x = 155, camera_y = 10):
+    def __init__(self, camera_x = 155, camera_y = 15):
         # inherit the parent class
         super(Object_detect, self).__init__()
         # declare mycobot280
@@ -69,8 +69,8 @@ class Object_detect():
         self.cache_x = self.cache_y = 0
         # set color HSV
         self.HSV = {
-            # "yellow": [np.array([11, 85, 70]), np.array([59, 255, 245])],
-            "yellow": [np.array([22, 93, 0]), np.array([45, 255, 245])],
+            "yellow": [np.array([11, 85, 70]), np.array([59, 255, 245])],
+            #"yellow": [np.array([22, 93, 0]), np.array([45, 255, 245])],
             "red": [np.array([0, 43, 46]), np.array([8, 255, 255])],
             "green": [np.array([35, 43, 35]), np.array([90, 255, 255])],
             "blue": [np.array([100, 43, 46]), np.array([124, 255, 255])],
@@ -174,7 +174,7 @@ class Object_detect():
 
     # decide whether grab cube 决定是否抓取立方体
     def decide_move(self, x, y, color):
-        print('decide-->',x, y, self.cache_x, self.cache_y)
+        print(x, y, self.cache_x, self.cache_y)
         # detect the cube status move or run 检测立方体状态移动或运行
         if (abs(x - self.cache_x) + abs(y - self.cache_y)) / 2 > 5:  # mm
             self.cache_x, self.cache_y = x, y
