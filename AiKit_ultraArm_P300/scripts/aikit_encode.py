@@ -77,15 +77,16 @@ class Detect_marker():
         
         self.ua.set_coords([coords[0][0]+x, coords[0][1]-y, 65.51], 50)
         time.sleep(2)
-        self.ua.set_coords([coords[0][0]+x, coords[0][1]-y, -65], 50)
+        self.ua.set_coords([coords[0][0]+x, coords[0][1]-y, -70], 50)
         time.sleep(2)
         
         # open pump
         self.pub_pump(True)
         
-        self.ua.set_angle(2, 0, 50)
-        time.sleep(0.02)
-        self.ua.set_angle(3, 0, 50)
+        self.ua.set_angles(angles[0], 50)
+        # self.ua.set_angle(2, 0, 50)
+        # time.sleep(0.02)
+        # self.ua.set_angle(3, 0, 50)
         time.sleep(0.5)
         
         # 抓取后放置区域
@@ -110,7 +111,7 @@ class Detect_marker():
         else:
             self.cache_x = self.cache_y = 0
             # 调整吸泵吸取位置，y增大,向左移动;y减小,向右移动;x增大,前方移动;x减小,向后方移动
-            self.move(x+40, y+60, color)
+            self.move(x+50, y+60, color)
 
     # init mycobot
     def init_mycobot(self):

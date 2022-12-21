@@ -82,7 +82,7 @@ class Object_detect():
         # send coordinates to move ultraArm
         self.ua.set_coords([x, -y, 65.51], 50)
         time.sleep(1.5)
-        self.ua.set_coords([x, -y, -65], 50)
+        self.ua.set_coords([x, -y, -70], 50)
         time.sleep(2)
 
 
@@ -90,9 +90,10 @@ class Object_detect():
         self.pump_on()
         time.sleep(1.5)
         
-        self.ua.set_angle(2, 0, 50)
-        time.sleep(0.02)
-        self.ua.set_angle(3, 0, 50)
+        self.ua.set_angles(self.move_angles[0], 50)
+        # self.ua.set_angle(2, 0, 50)
+        # time.sleep(0.02)
+        # self.ua.set_angle(3, 0, 50)
         time.sleep(0.5)
 
         self.ua.set_coords(self.move_coords[color], 50)
@@ -203,8 +204,8 @@ class Object_detect():
                            interpolation=cv2.INTER_CUBIC)
         if self.x1 != self.x2:
             # the cutting ratio here is adjusted according to the actual situation
-            frame = frame[int(self.y2*0.66):int(self.y1*1.1),
-                          int(self.x1*0.84):int(self.x2*1.08)]
+            frame = frame[int(self.y2*0.6):int(self.y1*1.1),
+                          int(self.x1*0.82):int(self.x2*1.08)]
         return frame
     
     # 检测物体的形状

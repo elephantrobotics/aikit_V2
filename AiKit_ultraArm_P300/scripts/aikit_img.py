@@ -79,16 +79,16 @@ class Object_detect():
         # send coordinates to move ultraArm P300 根据不同底板机械臂，调整吸泵高度
         self.ua.set_coords([x, -y, 65.51], 50)
         time.sleep(1.5)
-        self.ua.set_coords([x, -y, -65], 50)
+        self.ua.set_coords([x, -y, -70], 50)
         time.sleep(2)
 
         # open pump
         self.pump_on()
         time.sleep(1.5)
-
-        self.ua.set_angle(2, 0, 50)
-        time.sleep(0.02)
-        self.ua.set_angle(3, 0, 50)
+        self.ua.set_angles(self.move_angles[0], 50)
+        # self.ua.set_angle(2, 0, 50)
+        # time.sleep(0.02)
+        # self.ua.set_angle(3, 0, 50)
         time.sleep(0.5)
 
         self.ua.set_coords(self.move_coords[color], 50)
@@ -362,7 +362,7 @@ def process_transform_frame(frame, x1, y1, x2, y2):
                         interpolation=cv2.INTER_CUBIC)
     if x1 != x2:
         # the cutting ratio here is adjusted according to the actual situation
-       frame = frame[int(y2 * 0.7):int(y1 * 1.15),
+       frame = frame[int(y2 * 0.58):int(y1 * 1.15),
                        int(x1 * 0.7):int(x2 * 1.15)]
     return frame
 
