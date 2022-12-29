@@ -5,7 +5,8 @@ import time
 import os,sys
 import serial
 import serial.tools.list_ports
-from pymycobot.mypalletizer import MyPalletizer
+
+from pymycobot.ultraArm import ultraArm
 
 IS_CV_4 = cv2.__version__[0] == '4'
 __version__ = "1.0"  # Adaptive seeed
@@ -13,29 +14,32 @@ __version__ = "1.0"  # Adaptive seeed
 
 class Object_detect():
 
-    def __init__(self, camera_x = 165, camera_y = 10):
+    def __init__(self, camera_x = 255, camera_y = -10):
         # inherit the parent class
         super(Object_detect, self).__init__()
 
+        # declare ultraArm P300
+        self.ua = None
+        
         # get real serial
         self.plist = [
-            str(x).split(" - ")[0].strip() for x in serial.tools.list_ports.comports()
-        ]
-        # declare mypal260
-        self.mc = None
+        str(x).split(" - ")[0].strip() for x in serial.tools.list_ports.comports()
+    ]
+        
         # 移动角度
         self.move_angles = [
-            [0, 0, 0, 0],  # init the point
-            [-29.0, 5.88, -4.92, -76.28],  # point to grab
-            [17.4, -10.1, -87.27, 5.8, -2.02, 15],  # point to grab
+            [0.0, 0.0, 0.0],  # init the point
+            # [19.48, 0.0, 0.0],  # point to grab
+            [25.55, 0.0, 15.24],
+            [0.0, 14.32, 0.0],  # point to grab
         ]
 
         # 移动坐标
         self.move_coords = [
-            [132.6, -155.6, 211.8, -20.9],  # D Sorting area
-            [232.5, -134.1, 197.7, -45.26], # C Sorting area
-            [111.6, 159, 221.5, -120], # A Sorting area
-            [-15.9, 164.6, 217.5, -119.35], # B Sorting area  
+            [141.53, 148.67, 43.73], # D Sorting area
+            [248.52, 152.35, 53.45],    # C Sorting area
+            [269.02, -161.65, 51.42],   # A Sorting area
+            [146.8, -159.53, 50.44],     # B Sorting area
         ]
    
         # choose place to set cube
@@ -58,53 +62,45 @@ class Object_detect():
         # Get ArUco marker params.
         self.aruco_params = cv2.aruco.DetectorParameters_create()
 
-    # 开启吸泵 m5
+    # 开启吸泵 
     def pump_on(self):
-        # 让2号位工作
-        self.mc.set_basic_output(2, 0)
-        # 让5号位工作
-        self.mc.set_basic_output(5, 0)
+        self.ua.set_gpio_state(0)
 
-    # 停止吸泵 m5
+    # 停止吸泵 
     def pump_off(self):
-        # 让2号位停止工作
-        self.mc.set_basic_output(2, 1)
-        # 让5号位停止工作
-        self.mc.set_basic_output(5, 1)
+        self.ua.set_gpio_state(1)
 
     # Grasping motion
     def move(self, x, y, color):
-        # send Angle to move mypal260
-        self.mc.send_angles(self.move_angles[0], 20)
+        # send Angle to move ultraArm P300
+        self.ua.set_angles(self.move_angles[2], 50)
         time.sleep(3)
         
-        # send coordinates to move mypal260 根据不同底板机械臂，调整吸泵高度
-        self.mc.send_coords([x, y, 100, 0], 20, 0)
+        # send coordinates to move ultraArm P300 根据不同底板机械臂，调整吸泵高度
+        self.ua.set_coords([x, -y, 65.51], 50)
         time.sleep(1.5)
-        self.mc.send_coords([x, y, 63, 0], 20, 0)
-        time.sleep(1.5)
+        self.ua.set_coords([x, -y, -70], 50)
+        time.sleep(2)
 
         # open pump
         self.pump_on()
         time.sleep(1.5)
+        self.ua.set_angles(self.move_angles[0], 50)
+        # self.ua.set_angle(2, 0, 50)
+        # time.sleep(0.02)
+        # self.ua.set_angle(3, 0, 50)
+        time.sleep(0.5)
 
-        self.mc.send_angle(2, 0, 20)
-        time.sleep(0.3)
-        self.mc.send_angle(3, -18, 20)
-        time.sleep(2)
-
-        self.mc.send_coords(self.move_coords[color], 20, 1)
+        self.ua.set_coords(self.move_coords[color], 50)
     
-        time.sleep(3)
+        time.sleep(7)
 
         # close pump
    
         self.pump_off()
-        time.sleep(6)
+        time.sleep(8)
 
-        self.mc.send_angles(self.move_angles[1], 20)
-        time.sleep(1.5)
-        self.mc.send_angles([-30, 0, 0, 0], 20)
+        self.ua.set_angles(self.move_angles[1], 50)
         time.sleep(1.5)
 
     # decide whether grab cube
@@ -119,12 +115,12 @@ class Object_detect():
             # 调整吸泵吸取位置，y增大,向左移动;y减小,向右移动;x增大,前方移动;x减小,向后方移动
             self.move(x, y, color)
 
-    # init mypal260
+    # init ultraArm P300
     def run(self):
     
-        self.mc = MyPalletizer(self.plist[0], 115200)
-      
-        self.mc.send_angles([-29.0, 5.88, -4.92, -76.28], 20)
+        self.ua = ultraArm(self.plist[0], 115200)
+        self.ua.go_zero()
+        self.ua.set_angles([25.55, 0.0, 15.24], 50)
         time.sleep(3)
 
     # draw aruco
@@ -315,6 +311,7 @@ def parse_folder(folder):
     # path2 = r'D:/BaiduSyncdisk/PythonProject/OpenCV/' + folder
     path2 = img_path + '/' + folder
     # path2 = r'D:\heyuxuan\File\AiKit\aikit_V2\AiKit_260M5/' + folder
+    
     # print(path2)
 
     # if os.path.exists(path1):
@@ -365,7 +362,7 @@ def process_transform_frame(frame, x1, y1, x2, y2):
                         interpolation=cv2.INTER_CUBIC)
     if x1 != x2:
         # the cutting ratio here is adjusted according to the actual situation
-       frame = frame[int(y2 * 0.7):int(y1 * 1.15),
+       frame = frame[int(y2 * 0.58):int(y1 * 1.15),
                        int(x1 * 0.7):int(x2 * 1.15)]
     return frame
 

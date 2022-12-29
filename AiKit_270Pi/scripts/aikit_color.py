@@ -1,10 +1,7 @@
 #!/usr/bin/env python3
-from operator import imod
-from tokenize import Pointfloat
 import cv2
 import numpy as np
 import time
-import json
 import os,sys
 
 from pymycobot.mycobot import MyCobot
@@ -17,10 +14,10 @@ __version__ = "1.0"
 
 class Object_detect():
 
-    def __init__(self, camera_x = 142, camera_y = 7):
+    def __init__(self, camera_x = 145, camera_y = 7):
         # inherit the parent class
         super(Object_detect, self).__init__()
-        # declare mypal260
+        # declare mecharm 270
         self.mc = None
 
         # 移动角度
@@ -31,10 +28,10 @@ class Object_detect():
 
         # 移动坐标
         self.move_coords = [
-            [96.5, -101.9, 185.6, 155.25, 19.14, 75.88], # above the red bucket
-            [180.9, -99.3, 184.6, 124.4, 30.9, 80.58], # above the green bucket
-            [2.2, 128.5, 171.6, 163.27, 10.58, -147.25], # blue
-            [77.4, 122.1, 179.2, 151.66, 17.94, 178.24] # above the yellow bucket
+            [96.5, -101.9, 185.6, 155.25, 19.14, 75.88], # D Sorting area
+            [180.9, -99.3, 184.6, 124.4, 30.9, 80.58], # C Sorting area
+            [77.4, 122.1, 179.2, 151.66, 17.94, 178.24], # A Sorting area
+            [2.2, 128.5, 171.6, 163.27, 10.58, -147.25], # B Sorting area
         ]
         
         # which robot: USB* is m5; ACM* is wio; AMA* is raspi
@@ -49,8 +46,8 @@ class Object_detect():
             # self.Pin = [20, 21]
             self.Pin = [2, 5]
 
-            for i in self.move_coords:
-                i[2] -= 20
+            # for i in self.move_coords:
+            #     i[2] -= 20
         elif "dev" in self.robot_raspi or "dev" in self.robot_jes:
             import RPi.GPIO as GPIO
             GPIO.setwarnings(False)
@@ -72,33 +69,22 @@ class Object_detect():
         self.cache_x = self.cache_y = 0
         # set color HSV
         self.HSV = {
-            # "yellow": [np.array([11, 115, 70]), np.array([40, 255, 245])],
-            #"yellow": [np.array([22, 93, 0]), np.array([45, 255, 245])],
-            #"red": [np.array([0, 43, 46]), np.array([8, 255, 255])],
-            #"green": [np.array([35, 43, 35]), np.array([90, 255, 255])],
-            #"blue": [np.array([100, 43, 46]), np.array([124, 255, 255])],
+            # "yellow": [np.array([11, 85, 70]), np.array([59, 255, 245])],
+            # "yellow": [np.array([22, 93, 0]), np.array([45, 255, 245])],
             "yellow": [np.array([26, 43, 46]), np.array([34, 255, 255])],
-            #"red": [np.array([156, 43, 46]), np.array([180, 255, 255])],
             "red": [np.array([0, 43, 46]), np.array([8, 255, 255])],
-            #"green": [np.array([35, 43, 46]), np.array([77, 255, 255])],
             "green": [np.array([35, 43, 35]), np.array([90, 255, 255])],
             "blue": [np.array([100, 43, 46]), np.array([124, 255, 255])],
             "cyan": [np.array([78, 43, 46]), np.array([99, 255, 255])],
         }
-        # self.HSV = {
-        #     "yellow": [np.array([22, 93, 0]), np.array([45, 255, 245])],
-        #     "red": [np.array([0, 120, 120]), np.array([6, 255, 255])],
-        #     "green": [np.array([35, 43, 35]), np.array([90, 255, 255])],
-        #     "blue": [np.array([100, 43, 46]), np.array([124, 255, 255])],
-        #     "cyan": [np.array([78, 43, 46]), np.array([99, 255, 255])],
-        # }
-        # use to calculate coord between cube and mypal260
+       
+        # use to calculate coord between cube and mecharm 270
         # 用于计算立方体和 mycobot 之间的坐标
         self.sum_x1 = self.sum_x2 = self.sum_y2 = self.sum_y1 = 0
-        # The coordinates of the grab center point relative to the mypal260
+        # The coordinates of the grab center point relative to the mecharm270
         # 抓取中心点相对于 mycobot 的坐标
         self.camera_x, self.camera_y = camera_x, camera_y
-        # The coordinates of the cube relative to the mypal260
+        # The coordinates of the cube relative to the mecharm270
         # 立方体相对于 mycobot 的坐标
         self.c_x, self.c_y = 0, 0
         # The ratio of pixels to actual values
@@ -115,31 +101,29 @@ class Object_detect():
     # pump_control pi
     def gpio_status(self, flag):
         if flag:
-            # self.GPIO.output(20, 0)
+            self.GPIO.output(20, 0)
             self.GPIO.output(21, 0)
         else:
-            # self.GPIO.output(20, 1)
+            self.GPIO.output(20, 1)
             self.GPIO.output(21, 1)
     
     # 开启吸泵 m5
     def pump_on(self):
         # 让2号位工作
-        # self.mc.set_basic_output(2, 0)
+        self.mc.set_basic_output(2, 0)
         # 让5号位工作
         self.mc.set_basic_output(5, 0)
 
     # 停止吸泵 m5
     def pump_off(self):
         # 让2号位停止工作
-        # self.mc.set_basic_output(2, 1)
+        self.mc.set_basic_output(2, 1)
         # 让5号位停止工作
         self.mc.set_basic_output(5, 1)
 
     # Grasping motion
     def move(self, x, y, color):
-        # self.mc.set_free_mode(0)
-        time.sleep(1)
-        # send Angle to move mypal260
+        # send Angle to move mecharm270
         print(color)
         self.mc.send_angles(self.move_angles[1], 50)
         time.sleep(3)
@@ -172,12 +156,12 @@ class Object_detect():
         
         # print(tmp)
         self.mc.send_angles([tmp[0], 17.22, -32.51, tmp[3], 97, tmp[5]],30) # [18.8, -7.91, -54.49, -23.02, -0.79, -14.76]
-        time.sleep(3.5)
-        print(self.move_coords[color])
+        time.sleep(3)
+
         self.mc.send_coords(self.move_coords[color], 30, 0)
         # self.pub_marker(self.move_coords[color][0]/1000.0, self.move_coords[color]
         #                 [1]/1000.0, self.move_coords[color][2]/1000.0)
-        time.sleep(5.5)
+        time.sleep(3)
        
         # close pump
  
@@ -192,7 +176,7 @@ class Object_detect():
 
     # decide whether grab cube 决定是否抓取立方体
     def decide_move(self, x, y, color):
-        print('decide-->',x, y, self.cache_x, self.cache_y)
+        print(x, y, self.cache_x, self.cache_y)
         # detect the cube status move or run 检测立方体状态移动或运行
         if (abs(x - self.cache_x) + abs(y - self.cache_y)) / 2 > 5:  # mm
             self.cache_x, self.cache_y = x, y
@@ -202,7 +186,7 @@ class Object_detect():
             # 调整吸泵吸取位置，y增大,向左移动;y减小,向右移动;x增大,前方移动;x减小,向后方移动
             self.move(x, y, color)
 
-    # init mypal260
+    # init mecharm270
     def run(self):
         if "dev" in self.robot_wio :
             self.mc = MyCobot(self.robot_wio, 115200) 
@@ -269,16 +253,15 @@ class Object_detect():
         self.y1 = int(y1)
         self.x2 = int(x2)
         self.y2 = int(y2)
-        #print('cut-->',self.x1, self.y1, self.x2, self.y2)
 
-    # set parameters to calculate the coords between cube and mypal260
+    # set parameters to calculate the coords between cube and mecharm270
     # 设置参数以计算立方体和 mycobot 之间的坐标
     def set_params(self, c_x, c_y, ratio):
         self.c_x = c_x
         self.c_y = c_y
         self.ratio = 220.0/ratio
 
-    # calculate the coords between cube and mypal260
+    # calculate the coords between cube and mecharm270
     # 计算立方体和 mycobot 之间的坐标
     def get_position(self, x, y):
         return ((y - self.c_y)*self.ratio + self.camera_x), ((x - self.c_x)*self.ratio + self.camera_y)
@@ -359,20 +342,8 @@ class Object_detect():
                     cv2.rectangle(img, (x, y), (x+w, y+h), (153, 153, 0), 2)
                     # calculate the rectangle center 计算矩形中心
                     x, y = (x*2+w)/2, (y*2+h)/2
-                    # calculate the real coordinates of mypal260 relative to the target
+                    # calculate the real coordinates of mecharm270 relative to the target
                     #  计算 mycobot 相对于目标的真实坐标
-                    
-                    # if mycolor == "red":
-                    #     self.color = 0
-                    # elif mycolor == "green":
-                    #     self.color = 1
-                    # elif mycolor == "blue":
-                    #     self.color = 2
-                    #     # break
-                    # elif mycolor == "yellow":
-                    #     self.color = 3
-                    # else:
-                    #     self.color = 3
                     
                     if mycolor  == "yellow":
                         
@@ -410,7 +381,7 @@ if __name__ == "__main__":
         cap.open()
     # init a class of Object_detect
     detect = Object_detect()
-    # init mypal260
+    # init mecharm270
     detect.run()
 
     _init_ = 20  
@@ -453,7 +424,7 @@ if __name__ == "__main__":
             init_num += 1
             continue
 
-        # calculate params of the coords between cube and mypal260 计算立方体和 mycobot 之间坐标的参数
+        # calculate params of the coords between cube and mecharm270 计算立方体和 mycobot 之间坐标的参数
         if nparams < 10:
             if detect.get_calculate_params(frame) is None:
                 cv2.imshow("figure", frame)
@@ -470,7 +441,7 @@ if __name__ == "__main__":
                 continue
         elif nparams == 10:
             nparams += 1
-            # calculate and set params of calculating real coord between cube and mypal260
+            # calculate and set params of calculating real coord between cube and mecharm270
             # 计算和设置计算立方体和mycobot之间真实坐标的参数
             detect.set_params(
                 (detect.sum_x1+detect.sum_x2)/20.0,
@@ -488,7 +459,7 @@ if __name__ == "__main__":
             continue
         else:
             x, y = detect_result
-            # calculate real coord between cube and mypal260 计算立方体和 mycobot 之间的真实坐标
+            # calculate real coord between cube and mecharm270 计算立方体和 mycobot 之间的真实坐标
             real_x, real_y = detect.get_position(x, y)
             # print('real_x',round(real_x, 3),round(real_y, 3))
             if num == 20:

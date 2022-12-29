@@ -1,6 +1,6 @@
 import cv2 as cv
 import numpy as np
-from pymycobot.mypalletizer import MyPalletizer
+from pymycobot.ultraArm import ultraArm
 import time
 import serial
 import serial.tools.list_ports
@@ -13,14 +13,12 @@ pump_x = -30
 
 class Detect_marker():
     def __init__(self):
-        
+        #initialize MyCobot
+        self.ua = None
         # get real serial
         self.plist = [
-            str(x).split(" - ")[0].strip() for x in serial.tools.list_ports.comports()
-        ]
-        
-        #initialize MyCobot
-        self.mc = None
+        str(x).split(" - ")[0].strip() for x in serial.tools.list_ports.comports()
+    ]
         # set cache of real coord
         self.cache_x = self.cache_y = 0
         # Creating a Camera Object
@@ -47,11 +45,9 @@ class Detect_marker():
     # 控制吸泵      
     def pub_pump(self, flag):
         if flag:
-            self.mc.set_basic_output(2, 0)
-            self.mc.set_basic_output(5, 0)
+            self.ua.set_gpio_state(0)
         else:
-            self.mc.set_basic_output(2, 1)
-            self.mc.set_basic_output(5, 1)
+            self.ua.set_gpio_state(1)
 
     # Grasping motion
     def move(self, x, y, color):
@@ -59,49 +55,49 @@ class Detect_marker():
         print(color)
         
         angles = [
-            [0, 0, 0, 0],  # init the point
-            [-29.0, 5.88, -4.92, -76.28],  # point to grab
-            [17.4, -10.1, -87.27, 5.8],  # point to grab
+            [0.0, 0.0, 0.0],  # init the point
+            # [19.48, 0.0, 0.0],  # point to grab
+            [25.55, 0.0, 15.24],
+            [0.0, 14.32, 0.0],  # point to grab
         ]
 
         coords = [
-            [166.4, -21.8, 219, 0.96], # 初始化点
-            [111.6, 159, 221.5, -120], # A分拣区
-            [-15.9, 164.6, 217.5, -119.35], # B分拣区  
-            [232.5, -134.1, 197.7, -45.26], # C分拣区
-            [132.6, -155.6, 211.8, -20.9], # D分拣区
+            [267.15, 0.0, 125.96], # 初始化点
+            [269.02, -161.65, 51.42], # A分拣区
+            [146.8, -159.53, 50.44], # B分拣区  
+            [248.52, 152.35, 53.45], # C分拣区
+            [141.53, 148.67, 43.73], # D分拣区
+            [141.53, 148.67, 43.73], # D分拣区
             
         ]
 
         # send coordinates to move mycobot
-        self.mc.send_angles(angles[0], 30)
+        self.ua.set_angles(angles[2], 30)
         time.sleep(3)
         
-        self.mc.send_coords([coords[0][0]+x, coords[0][1]+y, 160, 85], 20, 0)
+        self.ua.set_coords([coords[0][0]+x, coords[0][1]-y, 65.51], 50)
         time.sleep(2)
-        # self.mc.send_coords([coords[0][0]+x, coords[0][1]+y, 108, 85], 20, 0)
-        self.mc.send_coords([coords[0][0]+x, coords[0][1]+y, 63, 85], 20, 0)
+        self.ua.set_coords([coords[0][0]+x, coords[0][1]-y, -70], 50)
         time.sleep(2)
         
         # open pump
         self.pub_pump(True)
         
-        self.mc.send_angle(2, 0, 20)
-        time.sleep(0.3)
-        self.mc.send_angle(3, -20, 20)
-        time.sleep(2)
+        self.ua.set_angles(angles[0], 50)
+        # self.ua.set_angle(2, 0, 50)
+        # time.sleep(0.02)
+        # self.ua.set_angle(3, 0, 50)
+        time.sleep(0.5)
         
         # 抓取后放置区域
-        self.mc.send_coords(coords[color], 20, 1) # coords[1] 为A分拣区，coords[2] 为B分拣区, coords[3] 为C分拣区，coords[4] 为D分拣区
-        time.sleep(4)
+        self.ua.set_coords(coords[color], 50) # coords[1] 为A分拣区，coords[2] 为B分拣区, coords[3] 为C分拣区，coords[4] 为D分拣区
+        time.sleep(7)
         
         # close pump
         self.pub_pump(False)  
-        time.sleep(5)
+        time.sleep(8)
         
-        self.mc.send_angles(angles[1], 20)
-        time.sleep(1.5)
-        self.mc.send_angles([-30, 0, 0, 0], 20)
+        self.ua.set_angles(angles[1], 50)
         time.sleep(1.5)
 
     # decide whether grab cube
@@ -115,13 +111,14 @@ class Detect_marker():
         else:
             self.cache_x = self.cache_y = 0
             # 调整吸泵吸取位置，y增大,向左移动;y减小,向右移动;x增大,前方移动;x减小,向后方移动
-            self.move(x+40, y+88, color)
+            self.move(x+50, y+60, color)
 
     # init mycobot
     def init_mycobot(self):
-        self.mc = MyPalletizer(self.plist[0], 115200)
+        self.ua = ultraArm(self.plist[0])
+        self.ua.go_zero()
         self.pub_pump(False)
-        self.mc.send_angles([-29.0, 5.88, -4.92, -76.28], 30)
+        self.ua.set_angles([25.55, 0.0, 15.24], 50)
         time.sleep(2)
         
     def run(self):
@@ -134,6 +131,9 @@ class Detect_marker():
                 print("It seems that the image cannot be acquired correctly.")
                 break
             
+            # img = cv.resize(img, None, fx=1.5, fy=1.5, interpolation=cv.INTER_CUBIC)
+            # img = img[140:630, 240:730]
+
             # transfrom the img to model of gray
             gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
             # Detect ArUco marker.
@@ -150,6 +150,8 @@ class Detect_marker():
                 self.color = 3
             elif ids == np.array([[4]]):
                 self.color = 4
+            else:
+                self.color = 5
 
             if len(corners) > 0:
                 if ids is not None:

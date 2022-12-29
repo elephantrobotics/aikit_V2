@@ -5,7 +5,7 @@ import os,sys
 import serial
 import serial.tools.list_ports
 import math
-from pymycobot.mypalletizer import MyPalletizer
+from pymycobot.ultraArm import ultraArm
 
 
 IS_CV_4 = cv2.__version__[0] == '4'
@@ -15,31 +15,31 @@ __version__ = "1.0"
 
 class Object_detect():
 
-    def __init__(self, camera_x = 165, camera_y = 10):
+    def __init__(self, camera_x = 255, camera_y = -10):
         # inherit the parent class
         super(Object_detect, self).__init__()
+        # declare ultraArm
+        self.ua = None
         
         # get real serial
         self.plist = [
-            str(x).split(" - ")[0].strip() for x in serial.tools.list_ports.comports()
-        ]
-        
-        # declare mypal260
-        self.mc = None
+        str(x).split(" - ")[0].strip() for x in serial.tools.list_ports.comports()
+    ]
 
         # 移动角度
         self.move_angles = [
-            [0, 0, 0, 0],  # init the point
-            [-29.0, 5.88, -4.92, -76.28],  # point to grab
-            [17.4, -10.1, -87.27, 5.8],  # point to grab
+            [0.0, 0.0, 0.0],  # init the point
+            # [19.48, 0.0, 0.0],  # point to grab
+            [25.55, 0.0, 15.24],
+            [0.0, 14.32, 0.0],  # point to grab
         ]
 
         # 移动坐标
         self.move_coords = [
-            [132.6, -155.6, 211.8, -20.9],   # above the first bucket red
-            [232.5, -134.1, 197.7, -45.26],    # above the second bucket green
-            [111.6, 159, 221.5, -120],   # above the third bucket blue
-            [-15.9, 164.6, 217.5, -119.35],     # gray
+            [141.53, 148.67, 43.73], # D Sorting area
+            [248.52, 152.35, 53.45],    # C Sorting area
+            [269.02, -161.65, 51.42],   # A Sorting area
+            [146.8, -159.53, 50.44],     # B Sorting area
         ]
         # choose place to set cube
         self.color = 0
@@ -48,11 +48,11 @@ class Object_detect():
         # set cache of real coord
         self.cache_x = self.cache_y = 0
 
-        # use to calculate coord between cube and mypal260
+        # use to calculate coord between cube and ultraArm P300
         self.sum_x1 = self.sum_x2 = self.sum_y2 = self.sum_y1 = 0
-        # The coordinates of the grab center point relative to the mypal260
+        # The coordinates of the grab center point relative to the ultraArm P300
         self.camera_x, self.camera_y = camera_x, camera_y
-        # The coordinates of the cube relative to the mypal260
+        # The coordinates of the cube relative to the ultraArm P300
         self.c_x, self.c_y = 0, 0
         # The ratio of pixels to actual values
         self.ratio = 0
@@ -64,57 +64,51 @@ class Object_detect():
         # 初始化背景减法器
         self.mog =cv2.bgsegm.createBackgroundSubtractorMOG() 
  
-    # 开启吸泵 m5
+    # 开启吸泵
     def pump_on(self):
-        # 让2号位工作
-        self.mc.set_basic_output(2, 0)
-        # 让5号位工作
-        self.mc.set_basic_output(5, 0)
+        self.ua.set_gpio_state(0)
 
-    # 停止吸泵 m5
+    # 停止吸泵
     def pump_off(self):
-        # 让2号位停止工作
-        self.mc.set_basic_output(2, 1)
-        # 让5号位停止工作
-        self.mc.set_basic_output(5, 1)
+         self.ua.set_gpio_state(1)
 
     # Grasping motion
     def move(self, x, y, color):
-        # send Angle to move mypal260
+        # send Angle to move ultraArm P300
         print(color)
-        self.mc.send_angles(self.move_angles[0], 20)
+        self.ua.set_angles(self.move_angles[2], 50)
         time.sleep(3)
 
-        # send coordinates to move mypal260
-        self.mc.send_coords([x, y, 100, 0], 20, 0)
+        # send coordinates to move ultraArm
+        self.ua.set_coords([x, -y, 65.51], 50)
         time.sleep(1.5)
-        self.mc.send_coords([x, y, 66, 0], 20, 0)
-        time.sleep(1.5)
+        self.ua.set_coords([x, -y, -70], 50)
+        time.sleep(2)
+
 
         # open pump
         self.pump_on()
+        time.sleep(1.5)
+        
+        self.ua.set_angles(self.move_angles[0], 50)
+        # self.ua.set_angle(2, 0, 50)
+        # time.sleep(0.02)
+        # self.ua.set_angle(3, 0, 50)
+        time.sleep(0.5)
 
-        self.mc.send_angle(2, 0, 20)
-        time.sleep(0.3)
-        self.mc.send_angle(3, -20, 20)
-        time.sleep(2)
-
-        self.mc.send_coords(self.move_coords[color], 20, 1)
+        self.ua.set_coords(self.move_coords[color], 50)
         # self.pub_marker(self.move_coords[color][0]/1000.0, self.move_coords[color]
         #                 [1]/1000.0, self.move_coords[color][2]/1000.0)
-        time.sleep(3)
+        time.sleep(7)
        
         # close pump
- 
         self.pump_off()
 
-        time.sleep(6)
+        time.sleep(8)
 
-    
-        self.mc.send_angles(self.move_angles[1], 20)
+        self.ua.set_angles(self.move_angles[1],50)
         time.sleep(1.5)
-        self.mc.send_angles([-30, 0, 0, 0], 20)
-        time.sleep(1.5)
+       
 
     # decide whether grab cube
     def decide_move(self, x, y, color):
@@ -128,11 +122,12 @@ class Object_detect():
             # 调整吸泵吸取位置，y增大,向左移动;y减小,向右移动;x增大,前方移动;x减小,向后方移动
             self.move(x, y, color)
 
-    # init mypal260
+    # init ultraArm P300
     def run(self):
      
-        self.mc = MyPalletizer(self.plist[0], 115200)
-        self.mc.send_angles([-29.0, 5.88, -4.92, -76.28], 20)
+        self.ua = ultraArm(self.plist[0], 115200)
+        self.ua.go_zero()
+        self.ua.set_angles([25.55, 0.0, 15.24], 50)
         time.sleep(3)
 
     # draw aruco
@@ -186,13 +181,13 @@ class Object_detect():
         self.y2 = int(y2)
         print(self.x1, self.y1, self.x2, self.y2)
 
-    # set parameters to calculate the coords between cube and mypal260
+    # set parameters to calculate the coords between cube and ultraArm P300
     def set_params(self, c_x, c_y, ratio):
         self.c_x = c_x
         self.c_y = c_y
         self.ratio = 220.0/ratio
 
-    # calculate the coords between cube and mypal260
+    # calculate the coords between cube and ultraArm P300
     def get_position(self, x, y):
         return ((y - self.c_y)*self.ratio + self.camera_x), ((x - self.c_x)*self.ratio + self.camera_y)
 
@@ -209,8 +204,8 @@ class Object_detect():
                            interpolation=cv2.INTER_CUBIC)
         if self.x1 != self.x2:
             # the cutting ratio here is adjusted according to the actual situation
-            frame = frame[int(self.y2*0.78):int(self.y1*1.1),
-                          int(self.x1*0.86):int(self.x2*1.08)]
+            frame = frame[int(self.y2*0.6):int(self.y1*1.1),
+                          int(self.x1*0.82):int(self.x2*1.08)]
         return frame
     
     # 检测物体的形状
@@ -311,7 +306,7 @@ if __name__ == "__main__":
         cap.open(1)
     # init a class of Object_detect
     detect = Object_detect()
-    # init mypal260
+    # init ultraArm P300
     detect.run()
 
     _init_ = 20  
@@ -354,7 +349,7 @@ if __name__ == "__main__":
             init_num += 1
             continue
 
-        # calculate params of the coords between cube and mypal260
+        # calculate params of the coords between cube and ultraArm P300
         if nparams < 10:
             if detect.get_calculate_params(frame) is None:
                 cv2.imshow("figure", frame)
@@ -371,7 +366,7 @@ if __name__ == "__main__":
                 continue
         elif nparams == 10:
             nparams += 1
-            # calculate and set params of calculating real coord between cube and mypal260
+            # calculate and set params of calculating real coord between cube and ultraArm P300
             detect.set_params(
                 (detect.sum_x1+detect.sum_x2)/20.0,
                 (detect.sum_y1+detect.sum_y2)/20.0,
@@ -391,7 +386,7 @@ if __name__ == "__main__":
             continue
         else:
             x, y = detect_result
-            # calculate real coord between cube and mypal260
+            # calculate real coord between cube and ultraArm P300
             real_x, real_y = detect.get_position(x, y)
             if num == 20:
                 

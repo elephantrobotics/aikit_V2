@@ -53,7 +53,9 @@ def take_photo():
 def cut_photo():
     
     path1 = '/home/ubuntu/catkin_ws/src/mycobot_ros/mycobot_ai/ai_mypalletizer_260/'    # pi
-    path2 = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))         # m5
+    # path2 = r'D:\heyuxuan\File\AiKit\aikit_V2\AiKit_260M5'         # m5
+    path2 = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    
     if os.path.exists(path1):
         path = path1
     elif os.path.exists(path2):
