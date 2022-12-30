@@ -127,6 +127,7 @@ class Detect_marker():
     def run(self):
         global pump_y, pump_x
         self.init_mycobot()
+        print('ok')
         num = sum_x = sum_y = 0 
         while cv.waitKey(1) < 0:
             success, img = self.cap.read()
