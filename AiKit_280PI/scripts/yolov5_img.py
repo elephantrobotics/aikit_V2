@@ -471,6 +471,8 @@ def runs():
         if not status:
             cap = cv2.VideoCapture(cap_num)
             status = True
+            print("请将可识别物体放置摄像头窗口进行拍摄")
+            print("Please place an identifiable object in the camera window for shooting")
             print("*  热键(请在摄像头的窗口使用):                   *")
             print("*  hotkey(please use it in the camera window): *")
             print("*  z: 拍摄图片(take picture)                    *")
