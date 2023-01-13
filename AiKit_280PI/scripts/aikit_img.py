@@ -366,18 +366,23 @@ class Object_detect():
 # The path to save the image folder
 def parse_folder(folder):
     restore = []
-    path = ''
-    path1 = '/home/er/aikit_V2/AiKit_280PI/' + folder
-    path2 = r'D:/BaiduSyncdisk/PythonProject/OpenCV/' + folder
+    # path = ''
+    # path1 = '/home/er/aikit_V2/AiKit_280PI/' + folder
+    # path2 = r'D:/BaiduSyncdisk/PythonProject/OpenCV/' + folder
 
-    if os.path.exists(path1):
-        path = path1
-    elif os.path.exists(path2):
-        path = path2
+    # if os.path.exists(path1):
+    #     path = path1
+    # elif os.path.exists(path2):
+    #     path = path2
+    
+    # path1 = os.path.split(os.path.abspath(os.path.dirname(__file__)))
+    path1 = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+    path = path1 + '/' + folder
 
     for i, j, k in os.walk(path):
         for l in k:
-            restore.append(cv2.imread(folder + '/{}'.format(l)))
+            restore.append(cv2.imread(path + '/{}'.format(l)))
     # print(restore)
     return restore
 

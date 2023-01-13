@@ -52,15 +52,20 @@ def take_photo():
 
 def cut_photo():
     
-    path1 = '/home/er/aikit_V2/AiKit_280PI'    # pi
-    path2 = r'D:/BaiduSyncdisk/PythonProject/OpenCV'         # m5
+    # path1 = '/home/er/aikit_V2/AiKit_280PI'    # pi
+    # path2 = r'D:/BaiduSyncdisk/PythonProject/OpenCV'         # m5
 
-    if os.path.exists(path1):
-        path = path1
-    elif os.path.exists(path2):
-        path = path2
-    else:
-        print("invalid file path! Please check whether the file path exists or modify it!")
+    # if os.path.exists(path1):
+    #     path = path1
+    # elif os.path.exists(path2):
+    #     path = path2
+    # else:
+    #     print("invalid file path! Please check whether the file path exists or modify it!")
+    
+    # path1 = os.path.split(os.path.abspath(os.path.dirname(__file__)))
+
+    # path = path1[0]
+    path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
     path_red = path + '/res/A'

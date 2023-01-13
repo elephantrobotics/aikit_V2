@@ -312,19 +312,14 @@ def parse_folder(folder):
     restore = []
     img_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     path1 = '/home/ubuntu/catkin_ws/src/mycobot_ros/mycobot_ai/ai_mypalletizer_260/' + folder
-    # path2 = r'D:/BaiduSyncdisk/PythonProject/OpenCV/' + folder
-    path2 = img_path + '/' + folder
-    # path2 = r'D:\heyuxuan\File\AiKit\aikit_V2\AiKit_260M5/' + folder
-    # print(path2)
 
-    # if os.path.exists(path1):
-    #     path = path1
-    # elif os.path.exists(path2):
-    path = path2
+    path = img_path + '/' + folder
+   
+
 
     for i, j, k in os.walk(path):
         for l in k:
-            restore.append(cv2.imread(folder + '/{}'.format(l)))
+            restore.append(cv2.imread(path + '/{}'.format(l)))
     # print(restore)
     return restore
 

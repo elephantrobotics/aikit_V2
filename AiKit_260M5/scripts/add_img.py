@@ -53,13 +53,13 @@ def take_photo():
 def cut_photo():
     
     path1 = '/home/ubuntu/catkin_ws/src/mycobot_ros/mycobot_ai/ai_mypalletizer_260/'    # pi
-    path2 = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))         # m5
-    if os.path.exists(path1):
-        path = path1
-    elif os.path.exists(path2):
-        path = path2
-    else:
-        print("invalid file path! Please check whether the file path exists or modify it!")
+    path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))         # m5
+    # if os.path.exists(path1):
+    #     path = path1
+    # elif os.path.exists(path2):
+    #     path = path2
+    # else:
+    #     print("invalid file path! Please check whether the file path exists or modify it!")
 
 
     path_red = path + '/res/A'
