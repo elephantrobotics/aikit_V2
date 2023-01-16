@@ -14,7 +14,7 @@ pip install pymycobot
 - python opencv支持库
 
 ```bash
-# 二者版本号需一致，这里使用4.6.0.66版本
+# 二者版本号需一致，建议使用4.6.0.66版本
 pip install opencv-python==4.6.0.66
 pip install opencv-contrib-python==4.6.0.66
 ```
