@@ -3,6 +3,7 @@ import cv2
 import numpy as np
 import time
 import os,sys
+import platform
 
 from pymycobot.mycobot import MyCobot
 
@@ -16,7 +17,7 @@ class Object_detect():
         # inherit the parent class
         super(Object_detect, self).__init__()
 
-        # declare mycobot 280pi
+        # declare mecharm 270pi
         self.mc = None
 
         # 移动角度
@@ -428,17 +429,25 @@ def process_transform_frame(frame, x1, y1, x2, y2):
     return frame
 
 def process_display_frame(connection):
-    cap_num = 0
     coord = None
     dst = None
     x1 = 0
     y1 = 0
     x2 = 0
     y2 = 0
-    cap = cv2.VideoCapture(cap_num, cv2.CAP_V4L)
-    # cap = cv2.VideoCapture(cap_num, cv2.CAP_DSHOW)
-    if not cap.isOpened():
-        cap.open()
+    if platform.system() == "Windows":
+        cap_num = 1
+        cap = cv2.VideoCapture(cap_num, cv2.CAP_V4L)
+        # cap = cv2.VideoCapture(cap_num, cv2.CAP_DSHOW)
+        if not cap.isOpened():
+            cap.open(1)
+    elif platform.system() == "Linux":
+        cap_num = 0
+        cap = cv2.VideoCapture(cap_num, cv2.CAP_V4L)
+        # cap = cv2.VideoCapture(cap_num, cv2.CAP_DSHOW)
+        if not cap.isOpened():
+            cap.open()
+            
     while cv2.waitKey(1) < 0:
         _, frame = cap.read()
         frame = process_transform_frame(frame, x1, y1, x2, y2)

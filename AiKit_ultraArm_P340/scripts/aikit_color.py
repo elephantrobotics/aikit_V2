@@ -4,6 +4,7 @@ import time
 import os,sys
 import serial
 import serial.tools.list_ports
+import platform
 
 from pymycobot.ultraArm import ultraArm
 
@@ -56,13 +57,13 @@ class Object_detect():
             "blue": [np.array([100, 43, 46]), np.array([124, 255, 255])],
             "cyan": [np.array([78, 43, 46]), np.array([99, 255, 255])],
         }
-        # use to calculate coord between cube and ultraArm P300
+        # use to calculate coord between cube and ultraArm P340
         # 用于计算立方体和 mycobot 之间的坐标
         self.sum_x1 = self.sum_x2 = self.sum_y2 = self.sum_y1 = 0
-        # The coordinates of the grab center point relative to the ultraArm P300
+        # The coordinates of the grab center point relative to the ultraArm P340
         # 抓取中心点相对于 mycobot 的坐标
         self.camera_x, self.camera_y = camera_x, camera_y
-        # The coordinates of the cube relative to the ultraArm P300
+        # The coordinates of the cube relative to the ultraArm P340
         # 立方体相对于 mycobot 的坐标
         self.c_x, self.c_y = 0, 0
         # The ratio of pixels to actual values
@@ -86,7 +87,7 @@ class Object_detect():
 
     # Grasping motion
     def move(self, x, y, color):
-        # send Angle to move ultraArm P300
+        # send Angle to move ultraArm P340
         print(color)
         self.ua.set_angles(self.move_angles[2], 50)
         time.sleep(3)
@@ -134,7 +135,7 @@ class Object_detect():
             # 调整吸泵吸取位置，y增大,向左移动;y减小,向右移动;x增大,前方移动;x减小,向后方移动
             self.move(x, y, color)
 
-    # init ultraArm P300
+    # init ultraArm P340
     def run(self):
      
         self.ua = ultraArm(self.plist[0], 115200)
@@ -194,14 +195,14 @@ class Object_detect():
         self.y2 = int(y2)
         print(self.x1, self.y1, self.x2, self.y2)
 
-    # set parameters to calculate the coords between cube and ultraArm P300
+    # set parameters to calculate the coords between cube and ultraArm P340
     # 设置参数以计算立方体和 mycobot 之间的坐标
     def set_params(self, c_x, c_y, ratio):
         self.c_x = c_x
         self.c_y = c_y
         self.ratio = 220.0/ratio
 
-    # calculate the coords between cube and ultraArm P300
+    # calculate the coords between cube and ultraArm P340
     # 计算立方体和 mycobot 之间的坐标
     def get_position(self, x, y):
         return ((y - self.c_y)*self.ratio + self.camera_x), ((x - self.c_x)*self.ratio + self.camera_y)
@@ -281,7 +282,7 @@ class Object_detect():
                     cv2.rectangle(img, (x, y), (x+w, y+h), (153, 153, 0), 2)
                     # calculate the rectangle center 计算矩形中心
                     x, y = (x*2+w)/2, (y*2+h)/2
-                    # calculate the real coordinates of ultraArm P300 relative to the target
+                    # calculate the real coordinates of ultraArm P340 relative to the target
                     #  计算 mycobot 相对于目标的真实坐标
                     
                     if mycolor  == "yellow":
@@ -313,14 +314,20 @@ class Object_detect():
 if __name__ == "__main__":
 
     # open the camera
-    cap_num = 1
-    cap = cv2.VideoCapture(cap_num, cv2.CAP_V4L)
-    
-    if not cap.isOpened():
-        cap.open(1)
+    if platform.system() == "Windows":
+        cap_num = 1
+        cap = cv2.VideoCapture(cap_num, cv2.CAP_V4L)
+        if not cap.isOpened():
+            cap.open(1)
+    elif platform.system() == "Linux":
+        cap_num = 0
+        cap = cv2.VideoCapture(cap_num, cv2.CAP_V4L)
+        if not cap.isOpened():
+            cap.open()
+            
     # init a class of Object_detect
     detect = Object_detect()
-    # init ultraArm P300
+    # init ultraArm P340
     detect.run()
 
     _init_ = 20  
@@ -363,7 +370,7 @@ if __name__ == "__main__":
             init_num += 1
             continue
 
-        # calculate params of the coords between cube and ultraArm P300 计算立方体和 mycobot 之间坐标的参数
+        # calculate params of the coords between cube and ultraArm P340 计算立方体和 mycobot 之间坐标的参数
         if nparams < 10:
             if detect.get_calculate_params(frame) is None:
                 cv2.imshow("figure", frame)
@@ -380,7 +387,7 @@ if __name__ == "__main__":
                 continue
         elif nparams == 10:
             nparams += 1
-            # calculate and set params of calculating real coord between cube and ultraArm P300
+            # calculate and set params of calculating real coord between cube and ultraArm P340
             # 计算和设置计算立方体和mycobot之间真实坐标的参数
             detect.set_params(
                 (detect.sum_x1+detect.sum_x2)/20.0,
@@ -398,7 +405,7 @@ if __name__ == "__main__":
             continue
         else:
             x, y = detect_result
-            # calculate real coord between cube and ultraArm P300 计算立方体和 mycobot 之间的真实坐标
+            # calculate real coord between cube and ultraArm P340 计算立方体和 mycobot 之间的真实坐标
             real_x, real_y = detect.get_position(x, y)
             # print('real_x',round(real_x, 3),round(real_y, 3))
             if num == 20:

@@ -4,6 +4,7 @@ from pymycobot.mypalletizer import MyPalletizer
 import time
 import serial
 import serial.tools.list_ports
+import platform
 
 
 # y轴偏移量
@@ -24,7 +25,10 @@ class Detect_marker():
         # set cache of real coord
         self.cache_x = self.cache_y = 0
         # Creating a Camera Object
-        cap_num = 1
+        if platform.system() == "Windows":
+            cap_num = 1
+        elif platform.system() == "Linux":
+            cap_num = 0
         self.cap = cv.VideoCapture(cap_num)
         
         # choose place to set cube
@@ -72,15 +76,15 @@ class Detect_marker():
             [132.6, -155.6, 211.8, -20.9], # D分拣区
             
         ]
-
+        print('real_x, real_y:', (round(coords[0][0]+x, 2), round(coords[0][1]+y, 2)))
         # send coordinates to move mycobot
         self.mc.send_angles(angles[0], 30)
         time.sleep(3)
         
-        self.mc.send_coords([coords[0][0]+x, coords[0][1]+y, 160, 85], 20, 0)
+        self.mc.send_coords([coords[0][0]+x, coords[0][1]+y, 160, -65], 20, 0)
         time.sleep(2)
         # self.mc.send_coords([coords[0][0]+x, coords[0][1]+y, 108, 85], 20, 0)
-        self.mc.send_coords([coords[0][0]+x, coords[0][1]+y, 63, 85], 20, 0)
+        self.mc.send_coords([coords[0][0]+x, coords[0][1]+y, 63, -65], 20, 0)
         time.sleep(2)
         
         # open pump
@@ -107,7 +111,7 @@ class Detect_marker():
     # decide whether grab cube
     def decide_move(self, x, y, color):
 
-        print(x,y)
+        # print(x,y)
         # detect the cube status move or run
         if (abs(x - self.cache_x) + abs(y - self.cache_y)) / 2 > 5: # mm
             self.cache_x, self.cache_y = x, y
@@ -115,7 +119,7 @@ class Detect_marker():
         else:
             self.cache_x = self.cache_y = 0
             # 调整吸泵吸取位置，y增大,向左移动;y减小,向右移动;x增大,前方移动;x减小,向后方移动
-            self.move(x+40, y+88, color)
+            self.move(x+10, y+85, color)
 
     # init mycobot
     def init_mycobot(self):

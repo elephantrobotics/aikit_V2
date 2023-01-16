@@ -5,6 +5,7 @@ import os,sys
 import serial
 import serial.tools.list_ports
 import math
+import platform
 from pymycobot.mypalletizer import MyPalletizer
 
 
@@ -304,11 +305,17 @@ class Object_detect():
 if __name__ == "__main__":
 
     # open the camera
-    cap_num = 1
-    # cap = cv2.VideoCapture(cap_num, cv2.CAP_V4L)
-    cap = cv2.VideoCapture(cap_num)
-    if not cap.isOpened():
-        cap.open(1)
+    if platform.system() == "Windows":
+        cap_num = 1
+        # cap = cv2.VideoCapture(cap_num, cv2.CAP_V4L)
+        cap = cv2.VideoCapture(cap_num)
+        if not cap.isOpened():
+            cap.open(1)
+    elif platform.system() == "Linux":
+        cap_num = 0
+        cap = cv2.VideoCapture(cap_num)
+        if not cap.isOpened():
+            cap.open()
     # init a class of Object_detect
     detect = Object_detect()
     # init mypal260
@@ -382,10 +389,8 @@ if __name__ == "__main__":
             continue
 
         # get detect result
-        # detect_result = detect.color_detect(frame)
-        # print('调用检测')
         detect_result = detect.shape_detect(frame)
-        # print("完成检测")
+   
         if detect_result is None:
             cv2.imshow("figure", frame)
             continue

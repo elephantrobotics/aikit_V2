@@ -5,6 +5,7 @@ import time
 import os,sys
 import serial
 import serial.tools.list_ports
+import platform
 
 from pymycobot.ultraArm import ultraArm
 
@@ -18,7 +19,7 @@ class Object_detect():
         # inherit the parent class
         super(Object_detect, self).__init__()
 
-        # declare ultraArm P300
+        # declare ultraArm P340
         self.ua = None
         
         # get real serial
@@ -72,11 +73,11 @@ class Object_detect():
 
     # Grasping motion
     def move(self, x, y, color):
-        # send Angle to move ultraArm P300
+        # send Angle to move ultraArm P340
         self.ua.set_angles(self.move_angles[2], 50)
         time.sleep(3)
         
-        # send coordinates to move ultraArm P300 根据不同底板机械臂，调整吸泵高度
+        # send coordinates to move ultraArm P340 根据不同底板机械臂，调整吸泵高度
         self.ua.set_coords([x, -y, 65.51], 50)
         time.sleep(1.5)
         self.ua.set_coords([x, -y, -70], 50)
@@ -115,7 +116,7 @@ class Object_detect():
             # 调整吸泵吸取位置，y增大,向左移动;y减小,向右移动;x增大,前方移动;x减小,向后方移动
             self.move(x, y, color)
 
-    # init ultraArm P300
+    # init ultraArm P340
     def run(self):
     
         self.ua = ultraArm(self.plist[0], 115200)
@@ -307,21 +308,11 @@ class Object_detect():
 def parse_folder(folder):
     restore = []
     img_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    path1 = '/home/ubuntu/catkin_ws/src/mycobot_ros/mycobot_ai/ai_mypalletizer_260/' + folder
-    # path2 = r'D:/BaiduSyncdisk/PythonProject/OpenCV/' + folder
-    path2 = img_path + '/' + folder
-    # path2 = r'D:\heyuxuan\File\AiKit\aikit_V2\AiKit_260M5/' + folder
-    
-    # print(path2)
-
-    # if os.path.exists(path1):
-    #     path = path1
-    # elif os.path.exists(path2):
-    path = path2
+    path = img_path + '/' + folder
 
     for i, j, k in os.walk(path):
         for l in k:
-            restore.append(cv2.imread(folder + '/{}'.format(l)))
+            restore.append(cv2.imread(path + '/{}'.format(l)))
     # print(restore)
     return restore
 
@@ -367,17 +358,25 @@ def process_transform_frame(frame, x1, y1, x2, y2):
     return frame
 
 def process_display_frame(connection):
-    cap_num = 1
     coord = None
     dst = None
     x1 = 0
     y1 = 0
     x2 = 0
     y2 = 0
-    # cap = cv2.VideoCapture(cap_num, cv2.CAP_V4L)
-    cap = cv2.VideoCapture(cap_num, cv2.CAP_DSHOW)
-    if not cap.isOpened():
-        cap.open(1)
+    if platform.system() == "Windows":
+        cap_num = 1
+        # cap = cv2.VideoCapture(cap_num, cv2.CAP_V4L)
+        cap = cv2.VideoCapture(cap_num, cv2.CAP_DSHOW)
+        if not cap.isOpened():
+            cap.open(1)
+    elif platform.system() == "Linux":
+        cap_num = 0
+        # cap = cv2.VideoCapture(cap_num, cv2.CAP_V4L)
+        cap = cv2.VideoCapture(cap_num, cv2.CAP_DSHOW)
+        if not cap.isOpened():
+            cap.open()
+            
     while cv2.waitKey(1) < 0:
         _, frame = cap.read()
         frame = process_transform_frame(frame, x1, y1, x2, y2)

@@ -1,6 +1,7 @@
 # coding:utf-8
 from fileinput import filename
 import os, cv2, sys
+import platform
 
 
 def take_photo():
@@ -22,9 +23,14 @@ def take_photo():
         os.mkdir(class_name)
 
     # 设置特定值
-
     index = 'takephoto'
-    cap = cv2.VideoCapture(0)
+    
+    # camera object
+    if platform.system() == "Windows":
+        cap_num = 1
+    elif platform.system() == "Linux":
+        cap_num = 0
+    cap = cv2.VideoCapture(cap_num)
 
     while True:
         # 读入每一帧

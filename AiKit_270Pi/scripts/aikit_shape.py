@@ -3,6 +3,7 @@ import numpy as np
 import time
 import os,sys
 import math
+import platform
 
 from pymycobot.mycobot import MyCobot
 
@@ -357,13 +358,23 @@ class Object_detect():
 if __name__ == "__main__":
 
     # open the camera
-    cap_num = 0
-    # cap = cv2.VideoCapture(cap_num, cv2.CAP_V4L)
-    cap = cv2.VideoCapture(cap_num)
-    cap.set(3, 640)
-    cap.set(4, 480)
-    if not cap.isOpened():
-        cap.open()
+    if platform.system() == "Windows":
+        cap_num = 1
+        # cap = cv2.VideoCapture(cap_num, cv2.CAP_V4L)
+        cap = cv2.VideoCapture(cap_num)
+        cap.set(3, 640)
+        cap.set(4, 480)
+        if not cap.isOpened():
+            cap.open(1)
+    elif platform.system() == "Linux":
+        cap_num = 0
+        # cap = cv2.VideoCapture(cap_num, cv2.CAP_V4L)
+        cap = cv2.VideoCapture(cap_num)
+        cap.set(3, 640)
+        cap.set(4, 480)
+        if not cap.isOpened():
+            cap.open()
+            
     # init a class of Object_detect
     detect = Object_detect()
     # init mecharm270

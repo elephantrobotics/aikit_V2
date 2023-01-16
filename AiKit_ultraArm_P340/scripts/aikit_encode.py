@@ -71,6 +71,8 @@ class Detect_marker():
             
         ]
 
+        print('real_x, real_y:', round(coords[0][0]+x, 2), round(coords[0][1]-y, 2))
+        
         # send coordinates to move mycobot
         self.ua.set_angles(angles[2], 30)
         time.sleep(3)
@@ -103,7 +105,7 @@ class Detect_marker():
     # decide whether grab cube
     def decide_move(self, x, y, color):
 
-        print(x,y)
+        # print(x,y)
         # detect the cube status move or run
         if (abs(x - self.cache_x) + abs(y - self.cache_y)) / 2 > 5: # mm
             self.cache_x, self.cache_y = x, y

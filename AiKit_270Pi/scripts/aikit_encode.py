@@ -5,6 +5,7 @@ from pymycobot.mycobot import MyCobot
 import RPi.GPIO as GPIO
 import time
 import os
+import platform
 
 
 
@@ -98,7 +99,7 @@ class Detect_marker():
             [180.9, -99.3, 184.6, 124.4, 30.9, 80.58], # C分拣区
             [96.5, -101.9, 185.6, 155.25, 19.14, 75.88],  # D分拣区  
         ]
-
+        print('real_x, real_y:', round(coords[0][0]+x, 2), round(coords[0][1]+y, 2))
         # send coordinates to move mycobot
         self.mc.send_angles(angles[0], 30)
         time.sleep(3)
@@ -145,7 +146,7 @@ class Detect_marker():
     # decide whether grab cube
     def decide_move(self, x, y, color):
 
-        print(x,y)
+        # print(x,y)
         # detect the cube status move or run
         if (abs(x - self.cache_x) + abs(y - self.cache_y)) / 2 > 5: # mm
             self.cache_x, self.cache_y = x, y

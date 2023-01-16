@@ -3,6 +3,7 @@ import cv2
 import numpy as np
 import time
 import os,sys
+import platform
 
 from pymycobot.mycobot import MyCobot
 
@@ -289,13 +290,11 @@ class Object_detect():
         x = y = 0
         hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
         for mycolor, item in self.HSV.items():
-            # print("mycolor:",mycolor)
-            redLower = np.array(item[0])
-            redUpper = np.array(item[1])
+            # redLower = np.array(item[0])
+            # redUpper = np.array(item[1])
 
             # transfrom the img to model of gray 将图像转换为灰度模型
             # hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-            # print("hsv",hsv)
 
             # wipe off all color expect color in range 擦掉所有颜色期望范围内的颜色
             mask = cv2.inRange(hsv, item[0], item[1])
@@ -374,11 +373,19 @@ class Object_detect():
 if __name__ == "__main__":
 
     # open the camera
-    cap_num = 0
-    cap = cv2.VideoCapture(cap_num, cv2.CAP_V4L)
-    
-    if not cap.isOpened():
-        cap.open()
+    if platform.system() == "Windows":
+        cap_num = 1
+        cap = cv2.VideoCapture(cap_num, cv2.CAP_V4L)
+        
+        if not cap.isOpened():
+            cap.open(1)
+    elif platform.system() == "Linux":
+        cap_num = 0
+        cap = cv2.VideoCapture(cap_num, cv2.CAP_V4L)
+        
+        if not cap.isOpened():
+            cap.open()
+            
     # init a class of Object_detect
     detect = Object_detect()
     # init mecharm270

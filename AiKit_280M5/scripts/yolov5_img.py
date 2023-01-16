@@ -17,7 +17,6 @@ __version__ = "1.0"  # Adaptive seeed
 
 
 class Object_detect():
-    global move_finsh
 
     def __init__(self, camera_x = 150, camera_y = 10):
         # inherit the parent class
@@ -98,7 +97,6 @@ class Object_detect():
         with open(classesFile, 'rt') as f:
             self.classes = f.read().rstrip('\n').split('\n')
        
-        self.change_flag = False 
 
     # 开启吸泵 m5
     def pump_on(self):
@@ -416,7 +414,7 @@ def runs():
         cap_num = 1
     elif platform.system() == "Linux":
         cap_num = 0
-        cap = cv2.VideoCapture(cap_num)
+    cap = cv2.VideoCapture(cap_num)
         
     print("*  热键(请在摄像头的窗口使用):                   *")
     print("*  hotkey(please use it in the camera window): *")

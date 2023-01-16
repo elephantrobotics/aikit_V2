@@ -4,6 +4,7 @@ import time
 import os,sys
 import serial
 import serial.tools.list_ports
+import platform
 
 from pymycobot.mypalletizer import MyPalletizer
 
@@ -190,10 +191,7 @@ class Object_detect():
                     return None
                 x1 = x2 = y1 = y2 = 0
                 point_11, point_21, point_31, point_41 = corners[0][0]
-                # print('point_11:', point_11)
-                # print('point_21:', point_21)
-                # print('point_31:', point_31)
-                # print('point_41:', point_41)
+             
                 x1, y1 = int((point_11[0] + point_21[0] + point_31[0] + point_41[0]) / 4.0), int(
                     (point_11[1] + point_21[1] + point_31[1] + point_41[1]) / 4.0)
                 point_1, point_2, point_3, point_4 = corners[1][0]
@@ -250,7 +248,6 @@ class Object_detect():
 
             # transfrom the img to model of gray 将图像转换为灰度模型
             hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-            # print("hsv",hsv)
 
             # wipe off all color expect color in range 擦掉所有颜色期望范围内的颜色
             mask = cv2.inRange(hsv, item[0], item[1])
@@ -329,11 +326,17 @@ class Object_detect():
 if __name__ == "__main__":
 
     # open the camera
-    cap_num = 1
-    cap = cv2.VideoCapture(cap_num, cv2.CAP_V4L)
-    
-    if not cap.isOpened():
-        cap.open(1)
+    if platform.system() == "Windows":
+        cap_num = 1
+        cap = cv2.VideoCapture(cap_num, cv2.CAP_V4L)
+        if not cap.isOpened():
+            cap.open(1)
+    elif platform.system() == "Linux":
+        cap_num = 0
+        cap = cv2.VideoCapture(cap_num, cv2.CAP_V4L)
+        if not cap.isOpened():
+            cap.open()
+            
     # init a class of Object_detect
     detect = Object_detect()
     # init mypal260
