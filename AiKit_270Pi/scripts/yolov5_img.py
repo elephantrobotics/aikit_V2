@@ -511,7 +511,7 @@ def runs():
                 #frame = frame[170:700, 230:720]
                 frame = detect.transform_frame(frame)
                 
-                cv2.imshow('oringal',frame)
+                # cv2.imshow('oringal',frame)
                 
                 if _init_ > 0:
                     _init_-=1

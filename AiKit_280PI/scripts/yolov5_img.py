@@ -444,17 +444,12 @@ def runs():
 
     # init mycobot
     detect.run()
-    flag = True
-    count = 0
+
     _init_ = 20  # 
     init_num = 0
     nparams = 0
     num = 0
     real_sx = real_sy = 0
-        
-    # flag = False 
-    import time
-    import glob
     
     # yolov5 img path
     path_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -512,7 +507,7 @@ def runs():
                 #frame = frame[170:700, 230:720]
                 frame = detect.transform_frame(frame)
                 
-                cv2.imshow('oringal',frame)
+                # cv2.imshow('oringal',frame)
                 
                 if _init_ > 0:
                     _init_-=1
