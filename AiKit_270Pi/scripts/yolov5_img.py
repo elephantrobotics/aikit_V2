@@ -16,7 +16,7 @@ __version__ = "1.0"  # Adaptive seeed
 
 class Object_detect():
 
-    def __init__(self, camera_x = 145, camera_y = 7):
+    def __init__(self, camera_x = 150, camera_y = 7):
         # inherit the parent class
         super(Object_detect, self).__init__()
 
