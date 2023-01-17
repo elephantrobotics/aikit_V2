@@ -49,10 +49,16 @@ class Detect_marker():
             self.pub_pump(False)
         
         # Creating a Camera Object
-        cap_num = 0
-        self.cap = cv2.VideoCapture(cap_num)
-        self.cap.set(3, 640)
-        self.cap.set(4, 480)
+        if platform.system() == "Windows":
+            cap_num = 1
+            self.cap = cv2.VideoCapture(cap_num)
+            self.cap.set(3, 640)
+            self.cap.set(4, 480)
+        elif platform.system() == "Linux":
+            cap_num = 0
+            self.cap = cv2.VideoCapture(cap_num)
+            self.cap.set(3, 640)
+            self.cap.set(4, 480)
         
         # choose place to set cube
         self.color = 0
