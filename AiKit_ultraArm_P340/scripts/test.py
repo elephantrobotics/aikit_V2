@@ -43,68 +43,61 @@ ua.go_zero()
 # x = 160
 # y = 10
 
-# ua.set_angles(move_angles[0], 20)
+#识别抓取前物块上方的点
+pre_radaus = [-0.62, 0.0, 0.0]
+pre_angles = [-35.52, 0.0, 0.0, 0.0]
+pre_coords = [191.27, -136.53, 130.0, -35.52]
+# 抓取物块的点
+cube_radaus = [-0.59, 0.25, 0.47]
+cube_angles = [-33.8, 14.32, 26.93, 0.0]
+cube_coords = [209.39, -140.17, 62.55, -33.8]
+
+# 抓取物块后的点
+fin_radaus = [-0.62, 0.12, 0.0]
+fin_angles = [-35.52, 6.88, 0.0, 0.0]
+fin_coords = [203.94, -145.58, 129.06, -35.52]
+
+# 识别抓取后 位置缓冲点
+cube_pre_radaus= [-1.40, 0.0, 0.17]
+cube_pre_angles =[-80.21, 0.0, 9.74, 0.0]
+cube_pre_coords = [39.62, -229.59, 106.32, -80.21]
+
+ua.set_angles([91.57, 7.6, 0.16], 50)
+ua.sleep(2)
+# ua.set_radians(pre_radaus, 30)
+ua.set_angles(pre_angles, 30)
+time.sleep(5)
+print('pre_coords:',ua.get_angles_info(),ua.get_coords_info())
+ua.set_radians(cube_radaus, 30)
+time.sleep(5)
+print('cube_coords:',ua.get_angles_info(),ua.get_coords_info())
+
+ua.set_gpio_state(0)
+
+ua.set_radians(fin_radaus, 30)
+time.sleep(5)
+print('finish_angles:', ua.get_angles_info(), ua.get_coords_info())
+
+time.sleep(2)
+
+ua.set_radians(cube_pre_radaus, 30)
+time.sleep(5)
+print('finish-pre:', ua.get_angles_info(), ua.get_coords_info())
+
+time.sleep(3)
+
+# a_radaus = [-1.14, 0.41, 0.66]
+# a_angles = [-65.32, 23.49, 37.82, 0.0]
+# a_coords =[107.48, -233.9, 33.38, -65.32]
+# # ua.set_radians(a_radaus, 30)
+# ua.set_coords(a_coords, 30)
+# time.sleep(8)
+# ua.set_gpio_state(1)
+# print('aaaa:',ua.get_angles_info(),ua.get_coords_info())
+# time.sleep(8)
+
 # time.sleep(3)
-
-# # send coordinates to move ultraArm
-# ua.set_coords([x, -y, 58.84], 20)
-# time.sleep(1.5)
-# ua.set_coords([x, -y, 21.8], 20)
-# time.sleep(2)
-
-# # open pump
-
-# time.sleep(1.5)
-
-# ua.set_angle(2, 0, 30)
-# time.sleep(0.3)
-# ua.set_angle(3, 0, 30)
-# time.sleep(1)
-
-# ua.set_coords(move_coords[0], 20)
-
-
-
-# radaus = [0.0, 0.25, 0.0]
-# angles =[0.0, 14.32, 0.0]
-# coords = [267.15, 0.0, 125.96]
-# ua.set_radians(radaus, 30)
-# time.sleep(4)
-# print('111',ua.get_angles_info(),ua.get_coords_info())
-# time.sleep(4)
-
-# radaus1 = [0.0, 0.295, 0.434]
-# angles1 =[0.0, 16.9, 24.87]
-# coords1 = [259.81, 0.0, 65.51]
-# ua.set_radians(radaus1, 30)
-# time.sleep(4)
-# print('222',ua.get_angles_info(),ua.get_coords_info())
-# time.sleep(4)
-
-
-# radaus2 = [0.0, 0.79, 1.047]
-# angles2 =[0.0, 45.26, 59.99]
-# coords2 = [257.36, 0.0, -29.73]
-# ua.set_radians(radaus2, 30)
-# time.sleep(4)
-# print('333',ua.get_angles_info(),ua.get_coords_info())
-# time.sleep(4)
-
-# ua.set_angle(2, 0, 30)
-# time.sleep(0.3)
-# ua.set_angle(3, 0, 30)
-# time.sleep(1)
-
-
-
-
-d_radaus = [0.81, 0.0, 0.664]
-d_angles = [47.9, 10.83, 24.58]
-d_coords =[141.53, 148.67, 43.73]
-ua.set_radians(d_radaus, 50)
-time.sleep(8)
-print('ddd',ua.get_angles_info(),ua.get_coords_info())
-time.sleep(8)
+# ua.set_radians(pre_radaus, 30)
 
 # init_radus = [0.446, 0.0, 0.266]
 # init_angles =[25.55, 0.0, 15.24]
@@ -115,32 +108,34 @@ time.sleep(8)
 # print('555',ua.get_angles_info(),ua.get_coords_info())
 # time.sleep(4)
 
-c_raduis = [0.55, 0.556,0.419]
-c_angles = []
-c_coords = [287.85, 186.93, 51.57]
-ua.set_radians(c_raduis, 50)
+# b_raduis = [-1.37, 0.31,0.77]
+# b_angles = [-78.5, 17.76, 44.12, 0.0]
+# b_coords = [46.88, -230.44, 26.34, -78.5]
+# # ua.set_radians(b_raduis, 50)
+# ua.set_angles(b_angles, 50)
+# time.sleep(8)
+# ua.set_gpio_state(1)
+# print('bbb:',ua.get_angles_info(),ua.get_coords_info())
+# time.sleep(8)
+
+# c_raduis = [-1.61, 0.31,0.77]
+# c_angles = [-92.25, 17.76, 44.12, 0.0]
+# c_coords = [-9.23, -234.98, 26.34, -92.25]
+# # ua.set_radians(c_raduis, 50)
+# ua.set_coords(c_coords, 50)
+# time.sleep(8)
+# ua.set_gpio_state(1)
+# print('ccc',ua.get_angles_info(),ua.get_coords_info())
+# time.sleep(8)
+
+d_raduis = [-1.84, 0.32,0.71]
+d_angles = [-105.42, 18.33, 40.68, 0.0]
+d_coords = [-64.36, -233.34, 32.15, -105.42]
+ua.set_radians(d_raduis, 50)
 # ua.set_coords(c_coords, 50)
 time.sleep(8)
-
-print('ccc',ua.get_angles_info(),ua.get_coords_info())
+ua.set_gpio_state(1)
+print('ddd',ua.get_angles_info(),ua.get_coords_info())
 time.sleep(8)
-
-# a_raduis = [-0.541, 0.728,0.332]
-# a_angles = []
-# a_coords = []
-# ua.set_radians(a_raduis, 50)
-# time.sleep(8)
-
-# print('aaa',ua.get_angles_info(),ua.get_coords_info())
-# time.sleep(8)
-
-# b_raduis = [-0.827, 0.05,0.603]
-# b_angles = []
-# b_coords = []
-# ua.set_radians(b_raduis, 50)
-# time.sleep(8)
-
-# print('aaa',ua.get_angles_info(),ua.get_coords_info())
-# time.sleep(8)
 
 
