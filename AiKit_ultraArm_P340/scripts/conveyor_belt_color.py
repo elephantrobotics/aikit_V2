@@ -26,35 +26,34 @@ down_z_offset = 40
 lower_distance_limit = 245
 upper_distance_limit = 374
 
-# count = -1
 is_detect = False
 
+# 动态获取串口信息
 plist = [
     str(x).split(" - ")[0].strip() for x in serial.tools.list_ports.comports()
 ]
 
 # 初始化距离传感器串口
-aikit = megaAikit(plist[1])
-print(plist[0],plist[1])
+kit = megaAikit(plist[1])
+print(plist[0], plist[1])
+
 
 # 获取传感器距离的工作接口，延时必须给 0.5
 class ThreadTof(Thread):
     def __init__(self):
-        Thread.__init__(self)
+        super().__init__()
         self.running = True
         self.dist = None
 
     def run(self):
-        while self.running:
-            if (not self.running):
+        while True:
+            dist = kit.get_tof_distance()
+            if dist is not None:
+                self.dist = dist
+            if not self.running:
                 self.dist = None
                 break
-            else:
-                dist = aikit.get_tof_distance()
-                if (None != dist):
-                    self.dist = dist
-                    # print(self.dist)
-                time.sleep(0.5)
+            time.sleep(0.5)
 
     def get_tof_dist(self):
         return self.dist
@@ -64,13 +63,7 @@ class ThreadTof(Thread):
 
 
 class Object_detect():
-
     def __init__(self, camera_x=244, camera_y=-108):  # 252,-114
-        
-        # get real serial
-        #     self.plist = [
-        #     str(x).split(" - ")[0].strip() for x in serial.tools.list_ports.comports()
-        # ]
 
         # initialize Mycobot
         self.ua = ultraArm(plist[0], 115200)
@@ -111,7 +104,6 @@ class Object_detect():
         else:
             self.ua.set_gpio_state(1)
 
-  
     # Grasping motion
     def move(self, x, y, color):
         print('x,y:', round(x, 2), round(y, 2))
@@ -177,13 +169,6 @@ class Object_detect():
             self.cache_x = self.cache_y = 0
             self.move(x, y, color)
 
-    # 检查识别物体的距离区间范围
-    def detect_tof_distance(self, dist, min_range, max_range):
-        if min_range <= dist <= max_range:
-            return True
-        else:
-            return False
-
     # 从右边获得物块并放到传送带上
     def pump_to_send(self):
         global is_detect
@@ -198,10 +183,8 @@ class Object_detect():
         tof_thread.daemon = True
         tof_thread.start()
         time.sleep(2)
-
         down_z = None
 
-        # while True:
         for i in range(0, 5):
             down_z = default_down_z_postion
             count = -1
@@ -210,31 +193,22 @@ class Object_detect():
             time.sleep(0.5)
             print('Current detected distance:', current_detect_dist)
             if lower_distance_limit <= current_detect_dist <= upper_distance_limit:
-                to_distance = lower_distance_limit + down_z_offset  # 285
                 # 最上方木块
-                # if detect_tof_distance(curr_detect_dist, lower_distance_limit, to_distance):
-                if self.detect_tof_distance(current_detect_dist, 245, 285):
-                    # absorbed_distance += to_distance + 1
+                if 245 <= current_detect_dist <= 285:
                     is_detect = True
                     count = 1
-                # if detect_tof_distance(curr_detect_dist, absorbed_distance, absorbed_distance + down_z_offset + 9):
-                elif self.detect_tof_distance(current_detect_dist, 286, 335):   # 286 335
-                    # absorbed_distance += absorbed_distance + down_z_offset + 10
+                elif 286 <= current_detect_dist <= 335:
                     is_detect = True
                     count = 2
-                # if detect_tof_distance(curr_detect_dist, absorbed_distance, absorbed_distance + down_z_offset - 26):
-                elif self.detect_tof_distance(current_detect_dist, 336, 356):
-                    # absorbed_distance += absorbed_distance + down_z_offset - 25
+                elif 336 <= current_detect_dist <= 356:
                     is_detect = True
                     count = 3
-                # if detect_tof_distance(curr_detect_dist, absorbed_distance, upper_distance_limit):
-                elif self.detect_tof_distance(current_detect_dist, 357, 374):
+                elif 357 <= current_detect_dist <= 374:
                     is_detect = True
                     count = 4
             else:
                 print('Detect out of range!')
                 exit(0)
-            # print('count:', count)
             if is_detect:
                 if -1 <= count <= 4:
                     if count == -1:
@@ -243,8 +217,6 @@ class Object_detect():
                         down_z -= down_z_offset / 2
                     else:
                         down_z -= (count * down_z_offset) - (down_z_offset / 2)
-
-                        # print('Current Z axis point1:', down_z)
         print('Current Z axis point:', down_z)
         # 初始点
         self.ua.set_angles(pump_angles[0], 60)
@@ -252,33 +224,29 @@ class Object_detect():
         # 下
         self.ua.set_coords([down_x, down_y, down_z], 60)
         time.sleep(2)
-
         # 打开吸泵
         self.ua.set_gpio_state(0)
         time.sleep(2)
-
         # 上
         self.ua.set_angles(pump_angles[1], 60)
         time.sleep(2)
         # 移动到指定默认的滑轨上方位置
         self.ua.set_angles(pump_angles[2], 60)
         time.sleep(2)
-
         # 下放到滑轨的位置
         self.ua.set_angles(pump_angles[3], 60)
         time.sleep(3)
-
         # 关闭吸泵
         self.ua.set_gpio_state(1)
         time.sleep(2)
-
+        # 停止传感器测距
         tof_thread.set_flag(False)
         # 打开传送带
-        aikit.write_steps_by_switch(1, 80)
+        kit.write_steps_by_switch(1, 80)
         time.sleep(3.5)
-
         # 关闭传送带
-        aikit.write_steps_by_switch(0, 80)
+        kit.write_steps_by_switch(0, 80)
+        # 开启传感器测距
         tof_thread.set_flag(True)
 
         is_detect = False
