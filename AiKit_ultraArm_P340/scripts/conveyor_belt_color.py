@@ -24,6 +24,10 @@ down_y = 252.1
 # 木块大小为40 mm，故木块与木块之间的偏移量为40 mm
 down_z_offset = 40
 
+# 传感器上下距离范围
+lower_distance_limit = 245
+upper_distance_limit = 373
+
 # count = -1
 is_detect = False
 
@@ -63,8 +67,8 @@ class ThreadTof(Thread):
 
 class Object_detect():
 
-    def __init__(self, camera_x=231, camera_y=-131):
-
+    def __init__(self, camera_x=244, camera_y=-108):  # 252,-114
+        
         # get real serial
         #     self.plist = [
         #     str(x).split(" - ")[0].strip() for x in serial.tools.list_ports.comports()
@@ -82,8 +86,8 @@ class Object_detect():
         self.cache_x = self.cache_y = 0
         # set color HSV
         self.HSV = {
-            "yellow": [np.array([11, 85, 70]), np.array([59, 255, 245])],
-            # "yellow": [np.array([22, 93, 0]), np.array([45, 255, 245])],
+            # "yellow": [np.array([11, 85, 70]), np.array([59, 255, 245])],
+            "yellow": [np.array([20, 100, 100]), np.array([30, 255, 255])],
             "red": [np.array([0, 43, 46]), np.array([8, 255, 255])],
             "green": [np.array([35, 43, 35]), np.array([90, 255, 255])],
             # "blue": [np.array([100, 43, 46]), np.array([124, 255, 255])],
@@ -124,15 +128,16 @@ class Object_detect():
         move_angles = [
             [0.0, 0.0, 0.0],  # init the point
             [25.55, 0.0, 15.24],  # 第二初始点
-            [-35.52, 0.0, 0.0, 0.0],  # 识别抓取前物块上方的点
-            [-33.8, 14.32, 26.93, 0.0],  # 抓取物块的点
+            [-33.8, -3.44, -2.86, 0.0],  # 识别抓取前物块上方的点
+            [-33.8, 10.89, 29.79, 0.0],  # 抓取物块的点
             [-80.21, 0.0, 9.74, 0.0],  # 识别抓取之后的缓冲点
             [0.0, 14.32, 0.0],  # point to grab
         ]
 
         # 移动坐标
         move_coords = [
-            [107.48, -233.9, 33.38, -65.32],  # A区域
+            # [107.48, -233.9, 33.38, -65.32],  # A区域
+            [99.13, -226.06, 37.44, -65.32],
             [46.88, -230.44, 26.34, -78.5],  # B区域
             [-9.23, -234.98, 26.34, -92.25],  # C区域
             [-64.36, -233.34, 32.15, -105.42],  # D区域
@@ -150,7 +155,8 @@ class Object_detect():
         # 抓取物块
         # self.ua.set_angles(move_angles[3], 30)
         # self.ua.set_coords([209.39, -140.17, 62.55, -33.8], 60)
-        self.ua.set_coords([x, y, 61], 60)
+        # self.ua.set_coords([200.32, -134.1, 58.1, -33.8], 60)
+        self.ua.set_coords([x, y, 59], 60)
         self.ua.sleep(2)
         # open pump
         self.pub_pump(True)
@@ -187,7 +193,7 @@ class Object_detect():
 
     # 检查识别物体的距离区间范围
     def detect_tof_distance(self, dist, min_range, max_range):
-        if dist >= min_range and dist <= max_range:
+        if min_range <= dist <= max_range:
             return True
         else:
             return False
@@ -217,32 +223,39 @@ class Object_detect():
             current_detect_dist = tof_thread.get_tof_dist()
             time.sleep(0.5)
             print('Current detected distance:', current_detect_dist)
-            if (245 <= current_detect_dist and 365 >= current_detect_dist):
+            if lower_distance_limit <= current_detect_dist <= upper_distance_limit:
+                to_distance = lower_distance_limit + down_z_offset  # 285
                 # 最上方木块
-                if (self.detect_tof_distance(current_detect_dist, 245, 285)):
+                # if detect_tof_distance(curr_detect_dist, lower_distance_limit, to_distance):
+                if self.detect_tof_distance(current_detect_dist, 245, 285):
+                    # absorbed_distance += to_distance + 1
                     is_detect = True
                     count = 1
-                elif (self.detect_tof_distance(current_detect_dist, 286, 335)):
+                # if detect_tof_distance(curr_detect_dist, absorbed_distance, absorbed_distance + down_z_offset + 9):
+                elif self.detect_tof_distance(current_detect_dist, 286, 335):   # 286 335
+                    # absorbed_distance += absorbed_distance + down_z_offset + 10
                     is_detect = True
                     count = 2
-                elif (self.detect_tof_distance(current_detect_dist, 336, 356)):
+                # if detect_tof_distance(curr_detect_dist, absorbed_distance, absorbed_distance + down_z_offset - 26):
+                elif self.detect_tof_distance(current_detect_dist, 336, 356):
+                    # absorbed_distance += absorbed_distance + down_z_offset - 25
                     is_detect = True
                     count = 3
-
-                elif (self.detect_tof_distance(current_detect_dist, 357, 370)):
+                # if detect_tof_distance(curr_detect_dist, absorbed_distance, upper_distance_limit):
+                elif self.detect_tof_distance(current_detect_dist, 357, 373):
                     is_detect = True
                     count = 4
-            elif (360 <= current_detect_dist and 373 >= current_detect_dist):
-                if self.detect_tof_distance(current_detect_dist, 360, 373):
-                    is_detect = True
-                    count = 4
+            # elif (360 <= current_detect_dist and 373 >= current_detect_dist):
+            #     if self.detect_tof_distance(current_detect_dist, 360, 373):
+            #         is_detect = True
+            #         count = 4
 
             else:
                 print('Detect out of range!')
                 exit(0)
             # print('count:', count)
             if is_detect:
-                if (-1 <= count <= 4):
+                if -1 <= count <= 4:
                     if count == -1:
                         down_z = default_down_z_postion
                     elif count == 1:
@@ -251,7 +264,7 @@ class Object_detect():
                         down_z -= (count * down_z_offset) - (down_z_offset / 2)
 
                         # print('Current Z axis point1:', down_z)
-        print('Current Z axis point2:', down_z)
+        print('Current Z axis point:', down_z)
         # 初始点
         self.ua.set_angles(pump_angles[0], 60)
         # 吸取的上下动作，吸取时打开吸泵
@@ -278,12 +291,14 @@ class Object_detect():
         self.ua.set_gpio_state(1)
         time.sleep(2)
 
+        tof_thread.set_flag(False)
         # 打开传送带
         aikit.write_steps_by_switch(1, 80)
         time.sleep(3.5)
 
         # 关闭传送带
         aikit.write_steps_by_switch(0, 80)
+        tof_thread.set_flag(True)
 
         is_detect = False
 
