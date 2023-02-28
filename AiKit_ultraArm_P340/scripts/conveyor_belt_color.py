@@ -65,7 +65,7 @@ class ThreadTof(Thread):
 class Object_detect():
     def __init__(self, camera_x=244, camera_y=-108):  # 252,-114
 
-        # initialize Mycobot
+        # initialize ultraArm
         self.ua = ultraArm(plist[0], 115200)
 
         self.ua.go_zero()
@@ -84,11 +84,11 @@ class Object_detect():
             # "blue": [np.array([100, 43, 46]), np.array([124, 255, 255])],
             # "cyan": [np.array([78, 43, 46]), np.array([99, 255, 255])],
         }
-        # use to calculate coord between cube and mycobot
+        # use to calculate coord between cube and ultraArm
         self.sum_x1 = self.sum_x2 = self.sum_y2 = self.sum_y1 = 0
-        # The coordinates of the grab center point relative to the mycobot
+        # The coordinates of the grab center point relative to the ultraArm
         self.camera_x, self.camera_y = camera_x, camera_y
-        # The coordinates of the cube relative to the mycobot
+        # The coordinates of the cube relative to the ultraArm
         self.c_x, self.c_y = 0, 0
         # The ratio of pixels to actual values
         self.ratio = self.ratio2 = 0
@@ -120,8 +120,7 @@ class Object_detect():
 
         # 移动坐标
         move_coords = [
-            # [107.48, -233.9, 33.38, -65.32],  # A区域
-            [99.13, -226.06, 37.44, -65.32],
+            [99.13, -226.06, 37.44, -65.32], # A区域
             [46.88, -230.44, 26.34, -78.5],  # B区域
             [-9.23, -234.98, 26.34, -92.25],  # C区域
             [-64.36, -233.34, 32.15, -105.42],  # D区域
@@ -135,7 +134,6 @@ class Object_detect():
 
         # 抓取物块
         # self.ua.set_angles(move_angles[3], 30)
-        # self.ua.set_coords([209.39, -140.17, 62.55, -33.8], 60)
         # self.ua.set_coords([200.32, -134.1, 58.1, -33.8], 60)
         self.ua.set_coords([x, y, 59], 60)
         self.ua.sleep(2)
@@ -251,7 +249,7 @@ class Object_detect():
 
         is_detect = False
 
-    # init mycobot
+    # init ultraArm
     def run(self):
         self.pump_to_send()
 
@@ -306,13 +304,13 @@ class Object_detect():
         self.y2 = int(y2)
         # print(self.x1, self.y1, self.x2, self.y2)
 
-    # set parameters to calculate the coords between cube and mycobot   
+    # set parameters to calculate the coords between cube and ultraArm   
     def set_params(self, c_x, c_y, ratio):
         self.c_x = c_x
         self.c_y = c_y
         self.ratio = 98.0 / ratio
 
-    # calculate the coords between cube and mycobot
+    # calculate the coords between cube and ultraArm
     def get_position(self, x, y):
         # return  ((y - self.c_y)*self.ratio + self.camera_x), ((x - self.c_x)*self.ratio + self.camera_y)
         # self.stop_or_run(True)
@@ -394,7 +392,7 @@ class Object_detect():
                     # calculate the rectangle center 计算矩形中心
                     x, y = (x * 2 + w) / 2, (y * 2 + h) / 2
                     # calculate the real coordinates of ultraArm P340 relative to the target
-                    #  计算 mycobot 相对于目标的真实坐标
+                    #  计算 ultraArm 相对于目标的真实坐标
 
                     if mycolor == "yellow":
 
@@ -433,7 +431,7 @@ def runs():
     # init a class of Object_detect
     detect = Object_detect()
 
-    # init mycobot
+    # init ultraArm
     detect.run()
 
     _init_ = 20  # 
@@ -474,7 +472,7 @@ def runs():
             init_num += 1
             continue
 
-        # calculate params of the coords between cube and mycobot
+        # calculate params of the coords between cube and ultraArm
         if nparams < 10:
             if detect.get_calculate_params(frame) is None:
                 cv2.imshow("figure", frame)
@@ -489,7 +487,7 @@ def runs():
                 continue
         elif nparams == 10:
             nparams += 1
-            # calculate and set params of calculating real coord between cube and mycobot
+            # calculate and set params of calculating real coord between cube and ultraArm
             detect.set_params(
                 (detect.sum_x1 + detect.sum_x2) / 20.0,
                 (detect.sum_y1 + detect.sum_y2) / 20.0,
@@ -507,7 +505,7 @@ def runs():
             continue
         else:
             x, y = detect_result
-            # calculate real coord between cube and mycobot
+            # calculate real coord between cube and ultraArm
             real_x, real_y = detect.get_position(x, y)
             if num == 20:
                 detect.decide_move(real_sx / 20.0, real_sy / 20.0, detect.color)
