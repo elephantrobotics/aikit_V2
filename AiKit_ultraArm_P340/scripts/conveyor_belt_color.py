@@ -3,15 +3,13 @@
 # ultrArm P340 传送带套装v1.0
 # 此处有距离传感器的使用
 
-import cv2, os
-from pymycobot.mycobot import MyCobot
+import cv2
 from pymycobot.ultraArm import ultraArm
 import numpy as np
 import time
 from threading import Thread
 import serial
 import serial.tools.list_ports
-import threading
 # from ultraArm.megaAiKit import megaAikit
 from megaAiKit import megaAikit
 
@@ -27,7 +25,7 @@ down_z_offset = 40
 
 # 传感器上下距离范围
 lower_distance_limit = 245
-upper_distance_limit = 373
+upper_distance_limit = 374
 
 # count = -1
 is_detect = False
@@ -114,16 +112,10 @@ class Object_detect():
         else:
             self.ua.set_gpio_state(1)
 
-    # 控制传送带
-    # def stop_or_run(self, temp):
-    #     if temp:
-    #         self.ua.set_basic_output(26,0)
-    #     else:
-    #         self.ua.set_basic_output(26,1)
-
+  
     # Grasping motion
     def move(self, x, y, color):
-        print('x,y:', x, y)
+        print('x,y:', round(x, 2), round(y, 2))
         print('color index:', color)
         # 移动角度
         move_angles = [
@@ -145,9 +137,6 @@ class Object_detect():
         ]
 
         # move to ultraArm
-        # self.ua.set_angles(move_angles[1], 60)
-        # self.ua.sleep(3)
-        # if 210 < x < 235:
         # 到达物块上方
         # self.ua.set_angles(move_angles[2], 50)
         self.ua.set_coords([x, y, 130], 60)
@@ -180,17 +169,14 @@ class Object_detect():
     # decide whether grab cube
     def decide_move(self, x, y, color):
 
-        print(x, y, self.cache_x, self.cache_y)
+        # print(x, y, self.cache_x, self.cache_y)
         # detect the cube status move or run
         if (abs(x - self.cache_x) + abs(y - self.cache_y)) / 2 > 5:  # mm
             self.cache_x, self.cache_y = x, y
             return
         else:
             self.cache_x = self.cache_y = 0
-            # self.stop_or_run(False)
             self.move(x, y, color)
-            # time.sleep(4)
-            # self.pump_to_send()
 
     # 检查识别物体的距离区间范围
     def detect_tof_distance(self, dist, min_range, max_range):
@@ -243,14 +229,9 @@ class Object_detect():
                     is_detect = True
                     count = 3
                 # if detect_tof_distance(curr_detect_dist, absorbed_distance, upper_distance_limit):
-                elif self.detect_tof_distance(current_detect_dist, 357, 373):
+                elif self.detect_tof_distance(current_detect_dist, 357, 374):
                     is_detect = True
                     count = 4
-            # elif (360 <= current_detect_dist and 373 >= current_detect_dist):
-            #     if self.detect_tof_distance(current_detect_dist, 360, 373):
-            #         is_detect = True
-            #         count = 4
-
             else:
                 print('Detect out of range!')
                 exit(0)
@@ -305,9 +286,7 @@ class Object_detect():
 
     # init mycobot
     def run(self):
-
         self.pump_to_send()
-        # self.stop_or_run(False)
 
     # draw aruco
     def draw_marker(self, img, x, y):
@@ -358,7 +337,7 @@ class Object_detect():
         self.y1 = int(y1) + 360
         self.x2 = int(x2)
         self.y2 = int(y2)
-        print(self.x1, self.y1, self.x2, self.y2)
+        # print(self.x1, self.y1, self.x2, self.y2)
 
     # set parameters to calculate the coords between cube and mycobot   
     def set_params(self, c_x, c_y, ratio):
@@ -497,7 +476,6 @@ def runs():
     real_sx = real_sy = 0
     while cv2.waitKey(1) < 0:
         # read camera
-        # move_count+=1
         _, frame = cap.read()
         # deal img
         frame = detect.transform_frame(frame)
@@ -550,7 +528,7 @@ def runs():
                 (detect.sum_y1 + detect.sum_y2) / 20.0,
                 abs(detect.sum_x1 - detect.sum_x2) / 10.0 + abs(detect.sum_y1 - detect.sum_y2) / 10.0
             )
-            print(abs(detect.sum_x1 - detect.sum_x2) / 10.0 + abs(detect.sum_y1 - detect.sum_y2) / 10.0)  # ratio
+            # print(abs(detect.sum_x1 - detect.sum_x2) / 10.0 + abs(detect.sum_y1 - detect.sum_y2) / 10.0)  # ratio
             print("ok")
             continue
 
