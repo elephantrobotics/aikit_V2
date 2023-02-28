@@ -2,7 +2,8 @@ from time import time
 from threading import Thread
 import time
 from pymycobot.ultraArm import ultraArm
-from ultraArm.megaAiKit import megaAikit
+# from ultraArm.megaAiKit import megaAikit
+from megaAiKit import megaAikit
 
 aikit = megaAikit("COM9")
 ua = ultraArm("COM6", 115200)
