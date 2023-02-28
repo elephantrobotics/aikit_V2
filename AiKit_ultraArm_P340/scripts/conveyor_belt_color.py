@@ -10,7 +10,6 @@ import time
 from threading import Thread
 import serial
 import serial.tools.list_ports
-# from ultraArm.megaAiKit import megaAikit
 from megaAiKit import megaAikit
 
 IS_CV_4 = cv2.__version__[0] == '4'
