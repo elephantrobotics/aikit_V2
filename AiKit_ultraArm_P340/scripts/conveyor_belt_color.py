@@ -23,8 +23,8 @@ down_y = 252.1
 down_z_offset = 40
 
 # 传感器上下距离范围
-lower_distance_limit = 245
-upper_distance_limit = 374
+lower_distance_limit = 255 # 245
+upper_distance_limit = 375 # 374
 
 is_detect = False
 
@@ -41,29 +41,31 @@ print(plist[0], plist[1])
 # 获取传感器距离的工作接口，延时必须给 0.5
 class ThreadTof(Thread):
     def __init__(self):
-        super().__init__()
+        Thread.__init__(self)
         self.running = True
-        self.dist = None
+        self.dist = kit.get_tof_distance()
 
     def run(self):
         while True:
-            dist = kit.get_tof_distance()
-            if dist is not None:
-                self.dist = dist
-            if not self.running:
-                self.dist = None
-                break
+            if self.running:
+                self.dist = kit.get_tof_distance()
+            # print(self.dist)
+            if (20 > self.dist):
+                continue
             time.sleep(0.5)
 
-    def get_tof_dist(self):
+    def distance(self):
         return self.dist
 
-    def set_flag(self, flag):
+    def set_running_flag(self, flag):
         self.running = flag
+
+    def get_running_flag(self):
+        return self.running
 
 
 class Object_detect():
-    def __init__(self, camera_x=244, camera_y=-108):  # 252,-114
+    def __init__(self, camera_x=263, camera_y=-108):  # 252,-114
 
         # initialize ultraArm
         self.ua = ultraArm(plist[0], 115200)
@@ -81,8 +83,8 @@ class Object_detect():
             "yellow": [np.array([20, 100, 100]), np.array([30, 255, 255])],
             "red": [np.array([0, 43, 46]), np.array([8, 255, 255])],
             "green": [np.array([35, 43, 35]), np.array([90, 255, 255])],
-            # "blue": [np.array([100, 43, 46]), np.array([124, 255, 255])],
-            # "cyan": [np.array([78, 43, 46]), np.array([99, 255, 255])],
+            "blue": [np.array([100, 43, 46]), np.array([124, 255, 255])],
+            "cyan": [np.array([78, 43, 46]), np.array([99, 255, 255])],
         }
         # use to calculate coord between cube and ultraArm
         self.sum_x1 = self.sum_x2 = self.sum_y2 = self.sum_y1 = 0
@@ -187,21 +189,21 @@ class Object_detect():
             down_z = default_down_z_postion
             count = -1
             is_detect = False
-            current_detect_dist = tof_thread.get_tof_dist()
+            current_detect_dist = tof_thread.distance()
             time.sleep(0.5)
             print('Current detected distance:', current_detect_dist)
             if lower_distance_limit <= current_detect_dist <= upper_distance_limit:
                 # 最上方木块
-                if 245 <= current_detect_dist <= 285:
+                if 255 <= current_detect_dist <= 310:
                     is_detect = True
                     count = 1
-                elif 286 <= current_detect_dist <= 335:
+                elif 311 <= current_detect_dist <= 340:
                     is_detect = True
                     count = 2
-                elif 336 <= current_detect_dist <= 356:
+                elif 341 <= current_detect_dist <= 360:
                     is_detect = True
                     count = 3
-                elif 357 <= current_detect_dist <= 374:
+                elif 361 <= current_detect_dist <= 375:
                     is_detect = True
                     count = 4
             else:
@@ -209,9 +211,9 @@ class Object_detect():
                 exit(0)
             if is_detect:
                 if -1 <= count <= 4:
-                    if count == -1:
-                        down_z = default_down_z_postion
-                    elif count == 1:
+                    # if count == -1:
+                    #     down_z = default_down_z_postion
+                    if count == 1:
                         down_z -= down_z_offset / 2
                     else:
                         down_z -= (count * down_z_offset) - (down_z_offset / 2)
@@ -238,14 +240,16 @@ class Object_detect():
         self.ua.set_gpio_state(1)
         time.sleep(2)
         # 停止传感器测距
-        tof_thread.set_flag(False)
+        tof_thread.set_running_flag(False)
         # 打开传送带
-        kit.write_steps_by_switch(1, 80)
+        kit.control_conveyor_by_switch(1, 80)
         time.sleep(3.5)
         # 关闭传送带
-        kit.write_steps_by_switch(0, 80)
+        kit.control_conveyor_by_switch(0, 80)
+        time.sleep(2)
+        kit.control_conveyor_by_switch(0, 80)
         # 开启传感器测距
-        tof_thread.set_flag(True)
+        tof_thread.set_running_flag(True)
 
         is_detect = False
 
@@ -403,13 +407,13 @@ class Object_detect():
                         self.color = 0
                         break
 
-                    # elif mycolor == "cyan":
-                    #     self.color = 2
-                    #     break
+                    elif mycolor == "cyan":
+                        self.color = 2
+                        break
 
-                    # elif mycolor == "blue":
-                    #     self.color = 2
-                    #     break
+                    elif mycolor == "blue":
+                        self.color = 2
+                        break
                     elif mycolor == "green":
                         self.color = 1
                         break
