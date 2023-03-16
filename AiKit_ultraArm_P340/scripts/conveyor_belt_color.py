@@ -10,7 +10,7 @@ import time
 from threading import Thread
 import serial
 import serial.tools.list_ports
-from megaAiKit import megaAikit
+from megaAikit import megaAikit
 
 IS_CV_4 = cv2.__version__[0] == '4'
 
@@ -37,6 +37,7 @@ plist = [
 kit = megaAikit(plist[1])
 print(plist[0], plist[1])
 
+tof_thread = None
 
 # 获取传感器距离的工作接口，延时必须给 0.5
 class ThreadTof(Thread):
@@ -49,7 +50,9 @@ class ThreadTof(Thread):
         while True:
             if self.running:
                 self.dist = kit.get_tof_distance()
-            # print(self.dist)
+                # print(self.dist)
+            else:
+                break
             if (20 > self.dist):
                 continue
             time.sleep(0.5)
@@ -58,7 +61,10 @@ class ThreadTof(Thread):
         return self.dist
 
     def set_running_flag(self, flag):
+        print('1:',self.running, flag)
         self.running = flag
+        print('2:',self.running)
+
 
     def get_running_flag(self):
         return self.running
@@ -107,7 +113,9 @@ class Object_detect():
             self.ua.set_gpio_state(1)
 
     # Grasping motion
+    
     def move(self, x, y, color):
+        global tof_thread
         print('x,y:', round(x, 2), round(y, 2))
         print('color index:', color)
         # 移动角度
@@ -148,6 +156,7 @@ class Object_detect():
         time.sleep(3)
         self.ua.set_coords(move_coords[color], 60)  # 0红1绿2蓝3黄
         time.sleep(4)
+
         # close pump
         self.pub_pump(False)
         time.sleep(2)
@@ -156,6 +165,8 @@ class Object_detect():
         self.ua.set_angles(move_angles[1], 60)
         time.sleep(4)
         self.pump_to_send()
+
+        tof_thread.set_running_flag(True)
 
     # decide whether grab cube
     def decide_move(self, x, y, color):
@@ -171,6 +182,7 @@ class Object_detect():
 
     # 从右边获得物块并放到传送带上
     def pump_to_send(self):
+        global tof_thread
         global is_detect
         pump_angles = [
             [91.57, 7.6, 0.16],  # first_point_anges
@@ -178,45 +190,58 @@ class Object_detect():
             [38, 10, -3],  # slide_rail_up_angles
             [38, 15, 23],  # slide_rail_down_angles
         ]
-
+        # print("start thread")
         tof_thread = ThreadTof()
         tof_thread.daemon = True
         tof_thread.start()
         time.sleep(2)
+        current_detect_dist = -1
         down_z = None
 
-        for i in range(0, 5):
+        while 1:
             down_z = default_down_z_postion
             count = -1
             is_detect = False
-            current_detect_dist = tof_thread.distance()
-            time.sleep(0.5)
+            if tof_thread.get_running_flag():
+                current_detect_dist = tof_thread.distance()
+                # print("3:",current_detect_dist)
+                time.sleep(0.5)
             print('Current detected distance:', current_detect_dist)
             if lower_distance_limit <= current_detect_dist <= upper_distance_limit:
+                # 停止传感器测距
                 # 最上方木块
                 if 255 <= current_detect_dist <= 310:
                     is_detect = True
                     count = 1
+                    break
                 elif 311 <= current_detect_dist <= 340:
                     is_detect = True
                     count = 2
+                    break
                 elif 341 <= current_detect_dist <= 360:
                     is_detect = True
                     count = 3
+                    break
                 elif 361 <= current_detect_dist <= 375:
                     is_detect = True
                     count = 4
+                    break
             else:
                 print('Detect out of range!')
-                exit(0)
-            if is_detect:
-                if -1 <= count <= 4:
-                    # if count == -1:
-                    #     down_z = default_down_z_postion
-                    if count == 1:
-                        down_z -= down_z_offset / 2
-                    else:
-                        down_z -= (count * down_z_offset) - (down_z_offset / 2)
+                # exit(0)
+                tof_thread.set_running_flag(True)
+                continue
+
+        if is_detect:
+            tof_thread.set_running_flag(False)
+
+            if -1 <= count <= 4:
+                # if count == -1:
+                #     down_z = default_down_z_postion
+                if count == 1:
+                    down_z -= down_z_offset / 2
+                else:
+                    down_z -= (count * down_z_offset) - (down_z_offset / 2)
         print('Current Z axis point:', down_z)
         # 初始点
         self.ua.set_angles(pump_angles[0], 60)
@@ -239,17 +264,24 @@ class Object_detect():
         # 关闭吸泵
         self.ua.set_gpio_state(1)
         time.sleep(2)
-        # 停止传感器测距
-        tof_thread.set_running_flag(False)
+        
         # 打开传送带
-        kit.control_conveyor_by_switch(1, 80)
+        for i in range(5):
+            try:
+                kit.control_conveyor_by_switch(1, 80)
+                break
+            except:
+                if i == 2:
+                    print("..")
+                    exit(0)
+                pass
         time.sleep(3.5)
         # 关闭传送带
         kit.control_conveyor_by_switch(0, 80)
         time.sleep(2)
         kit.control_conveyor_by_switch(0, 80)
         # 开启传感器测距
-        tof_thread.set_running_flag(True)
+        # tof_thread.set_running_flag(True)
 
         is_detect = False
 
