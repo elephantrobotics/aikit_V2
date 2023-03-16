@@ -2,7 +2,6 @@ from enum import Enum
 from serial import Serial
 import struct
 
-
 class DeviceAdress(Enum):
     """Communication protocol device sequence frame list, used to mark different hardware devices"""
 
@@ -14,7 +13,6 @@ class DeviceAdress(Enum):
 
     """57 stepper motor"""
     STEPPER_MOTOR_57 = 0x31
-
 
 class Command(Enum):
     """Communication protocol instruction sequence frame list, used to mark different interfaces"""
@@ -53,11 +51,10 @@ class Command(Enum):
     WRITE_DISTANCE = 0xa9
 
 
+
 """
     The interval between using this type of interface must be at least 1 millisecond
 """
-
-
 class megaAikit(object):
     invalid_data = -1
     command_header = 255
@@ -69,8 +66,7 @@ class megaAikit(object):
     check_digit_flag = False
 
     """Initialize all configurations"""
-
-    def __init__(self, port, baudrate="115200", timeout=0.1, debug=False):
+    def __init__(self, port, baudrate = "115200", timeout = 0.1, debug = False):
         """
         Args:
             port     : port string
@@ -87,20 +83,19 @@ class megaAikit(object):
         self._serial_port.dtr = False
         self._serial_port.open()
 
-    """Destroy all memory"""
 
+    """Destroy all memory"""
     def __destroy__(self):
         self._serial_port.close()
 
-    """Send data to the slave to respond with the specified command communication protocol"""
 
+    """Send data to the slave to respond with the specified command communication protocol"""
     def write(self, adress, content, command):
         # print("write list: ", [self.command_header, self.command_header, adress, len(content), *content, command, self.check_digit(command, content)])
-        self._serial_port.write([self.command_header, self.command_header, adress, len(content), *content, command,
-                                 self.check_digit(command, content)])
+        self._serial_port.write([self.command_header, self.command_header, adress, len(content), *content, command, self.check_digit(command, content)]);
+
 
     """Calculate communication protocol check digit"""
-
     def check_digit(self, cmd, contents):
         ver = cmd
         if 0 < len(contents):
@@ -110,8 +105,8 @@ class megaAikit(object):
         ver &= 0xff
         return ver
 
-    """Communication protocol instruction double frame header inspection"""
 
+    """Communication protocol instruction double frame header inspection"""
     def double_header_check(self, read_buff):
         if 2 <= len(read_buff):
             if self.command_header == read_buff[0] and self.command_header == read_buff[1]:
@@ -121,8 +116,8 @@ class megaAikit(object):
         else:
             return False
 
-    """Read the communication protocol command in the specified format from the slave"""
 
+    """Read the communication protocol command in the specified format from the slave"""
     def read(self):
         content_begin = 4
         while True:
@@ -138,12 +133,12 @@ class megaAikit(object):
                             self.check_digit_user = read_buff[content_begin + 1]
                         else:
                             content_end = content_begin + self.length
-                            self.content = read_buff[content_begin: content_end]
+                            self.content = read_buff[content_begin : content_end]
                             self.cmd = read_buff[content_end]
                             self.check_digit_user = read_buff[content_end + 1]
 
                         self.check_digit_ok = self.check_digit(self.cmd, self.content)
-
+                        
                         if self.check_digit_flag:
                             return True
                         else:
@@ -156,11 +151,11 @@ class megaAikit(object):
                     self.content = []
                     return False
 
-    """Intercept the command returned from the slave except the frame header, frame tail...effective data"""
 
+    """Intercept the command returned from the slave except the frame header, frame tail...effective data"""
     def gets_data_from_slave(self):
         read_code = self.read()
-
+        
         valid_data = []
         if [] == self.content:
             return []
@@ -171,12 +166,12 @@ class megaAikit(object):
             self.content = []
         return valid_data
 
-    """Convert the data of the variable parameter list into high and low lists in turn"""
 
+    """Convert the data of the variable parameter list into high and low lists in turn"""
     def unpack_args(self, *args):
         bits_pack_list = []
         args_list = list(args)
-
+        
         '''
         valid_data_list = []
         # print(args_list)
@@ -204,24 +199,24 @@ class megaAikit(object):
                 bits_pack_list = []
         return bits_pack_list
 
-    """Interface for converting user data to communication protocol data"""
 
+    """Interface for converting user data to communication protocol data"""
     def control_command(self, adress, command, *args):
         unpack_list = self.unpack_args(*args)
         # print("unpack_list: ", unpack_list)
 
         new_data_buff = unpack_list
-
-        if (adress == DeviceAdress.STEPPER_MOTOR_42.value or adress == DeviceAdress.STEPPER_MOTOR_57.value) and (
-                command == Command.SET_DIR.value or command == Command.SET_SPEED.value):
+        
+        if (adress == DeviceAdress.STEPPER_MOTOR_42.value or adress == DeviceAdress.STEPPER_MOTOR_57.value) \
+            and (command == Command.SET_DIR.value or command == Command.SET_SPEED.value):
             new_data_buff.pop(0)
-
-        if (adress == DeviceAdress.STEPPER_MOTOR_42.value or adress == DeviceAdress.STEPPER_MOTOR_57.value) and (
-                command == Command.WRITE_ANGLE.value):
+            
+        if (adress == DeviceAdress.STEPPER_MOTOR_42.value or adress == DeviceAdress.STEPPER_MOTOR_57.value) \
+            and (command == Command.WRITE_ANGLE.value):
             new_data_buff.pop(2)
 
-        if (adress == DeviceAdress.STEPPER_MOTOR_42.value or adress == DeviceAdress.STEPPER_MOTOR_57.value) and (
-                command == Command.WRITE_STEPS.value):
+        if (adress == DeviceAdress.STEPPER_MOTOR_42.value or adress == DeviceAdress.STEPPER_MOTOR_57.value) \
+            and (command == Command.WRITE_STEPS.value):
             new_data_buff.pop(2)
             new_data_buff.pop(3)
 
@@ -231,15 +226,20 @@ class megaAikit(object):
 
         if (adress == DeviceAdress.STEPPER_MOTOR_42.value) and (command == Command.WRITE_DISTANCE.value):
             new_data_buff.pop(2)
+            new_data_buff.pop(3)
+
+        if (adress == DeviceAdress.STEPPER_MOTOR_42.value) and (command == Command.WRITE_DISTANCE_ZERO.value):
+            new_data_buff.pop(0)
 
         # print("new_data_buff: ", new_data_buff)
+        
 
         if self.invalid_data < len(new_data_buff):
             self.write(adress, new_data_buff, command)
 
-    """Velocity parameter range check"""
 
-    def speed_range_check(self, speed, min=0, max=100):
+    """Velocity parameter range check"""
+    def speed_range_check(self, speed, min = 0, max = 100):
         """
         Args:
             speed : int  (0 ~ 100)
@@ -248,8 +248,8 @@ class megaAikit(object):
         """
         return min <= speed and max >= speed
 
-    """Orientation parameter range check"""
 
+    """Orientation parameter range check"""
     def dir_range_check(self, dir):
         """
         Args:
@@ -257,8 +257,8 @@ class megaAikit(object):
         """
         return 0 == dir or 1 == dir;
 
-    """An interface that handles the communication protocol that only returns one data to the user's request"""
 
+    """An interface that handles the communication protocol that only returns one data to the user's request"""
     def get_single_data_from_read(self, id, command):
         """
         Args:
@@ -275,10 +275,11 @@ class megaAikit(object):
         else:
             return self.invalid_data
 
-    """User Interface"""
+
+
+    """User Interface""" 
 
     """Obtain the real-time ranging range of the TOF ranging sensor (0.02m ~ 2m)"""
-
     def get_tof_distance(self):
         self.control_command(DeviceAdress.IR_DETECT.value, Command.GET_TOF_DISTANCE.value)
         valid_content_list = self.gets_data_from_slave()
@@ -293,8 +294,8 @@ class megaAikit(object):
         if 20 <= distance:
             return distance
 
-    """Obtain the movement direction of 42 and 57 type stepper motors"""
 
+    """Obtain the movement direction of 42 and 57 type stepper motors"""
     def get_dir(self, id):
         """
         Args:
@@ -302,8 +303,8 @@ class megaAikit(object):
         """
         return self.get_single_data_from_read(id, Command.GET_DIR.value)
 
-    """Obtain the movement speed of 42 and 57 type stepper motors"""
 
+    """Obtain the movement speed of 42 and 57 type stepper motors"""
     def get_speed(self, id):
         """
         Args:
@@ -311,13 +312,13 @@ class megaAikit(object):
         """
         return self.get_single_data_from_read(id, Command.GET_SPEED.value)
 
-    """Get the moving distance of the slide rail"""
 
+    """Get the moving distance of the slide rail"""
     def get_distance(self):
         return self.get_single_data_from_read(1, Command.GET_DISTANCE.value)
 
-    """Change the direction of movement of 42, 57 stepper motors"""
 
+    """Change the direction of movement of 42, 57 stepper motors"""
     def set_dir(self, id, dir):
         """
         Args:
@@ -330,8 +331,8 @@ class megaAikit(object):
             elif 2 == id:
                 self.control_command(DeviceAdress.STEPPER_MOTOR_57.value, Command.SET_DIR.value, dir)
 
-    """Change the speed of movement of stepper motors 42 and 57"""
 
+    """Change the speed of movement of stepper motors 42 and 57"""
     def set_speed(self, id, speed):
         """
         Args:
@@ -344,8 +345,8 @@ class megaAikit(object):
             elif 2 == id:
                 self.control_command(DeviceAdress.STEPPER_MOTOR_57.value, Command.SET_SPEED.value, speed)
 
-    """Control the motor with an angle"""
 
+    """Control the motor with an angle"""
     def write_angle(self, id, angle, speed):
         """
         Args:
@@ -359,8 +360,8 @@ class megaAikit(object):
             elif 2 == id:
                 self.control_command(DeviceAdress.STEPPER_MOTOR_57.value, Command.WRITE_ANGLE.value, angle, speed)
 
-    """Control the motor with pulses"""
 
+    """Control the motor with pulses"""
     def write_steps(self, id, steps, speed, dir):
         """
         Args:
@@ -375,8 +376,8 @@ class megaAikit(object):
             elif 2 == id:
                 self.control_command(DeviceAdress.STEPPER_MOTOR_57.value, Command.WRITE_STEPS.value, steps, speed, dir)
 
-    """Control slide rail movement with switch"""
 
+    """Control slide rail movement with switch"""
     def write_steps_by_switch(self, swicth, speed):
         """
         Args:
@@ -384,21 +385,26 @@ class megaAikit(object):
             speed  : int  (0 ~ 100)
         """
         if (1 == swicth or 0 == swicth) and self.speed_range_check(speed):
-            self.control_command(DeviceAdress.STEPPER_MOTOR_57.value, Command.WRITE_STEPS_BY_SWITCH.value, swicth,
-                                 speed)
+            self.control_command(DeviceAdress.STEPPER_MOTOR_57.value, Command.WRITE_STEPS_BY_SWITCH.value, swicth, speed)
+    
 
     """Control slide rail movement by distance"""
-
-    def write_distance(self, distance, speed):
+    def write_distance(self, distance, speed, tray_diameter_cm):
         """
         Args:
-            distance : int  (1cm ~ 10cm, negative range is not supported)
-            speed    : int  (0 ~ 100)
+            distance     : int   (1cm ~ 10cm, negative range is not supported)
+            speed        : int   (0 ~ 100)
+            tray_diameter_cm: float (diameter of the object tray)
         """
         if (1 <= distance and 10 >= distance) and self.speed_range_check(speed):
-            self.control_command(DeviceAdress.STEPPER_MOTOR_42.value, Command.WRITE_DISTANCE.value, distance, speed)
+            self.control_command(DeviceAdress.STEPPER_MOTOR_42.value, Command.WRITE_DISTANCE.value, distance, speed, tray_diameter_cm)
+
 
     """Return the control slide to zero position"""
-
-    def write_distance_zero(self):
-        self.control_command(DeviceAdress.STEPPER_MOTOR_42.value, Command.WRITE_DISTANCE_ZERO.value)
+    def write_distance_zero(self, speed):
+        """
+        Args:
+            speed    : int  (0 ~ 100)
+        """
+        if self.speed_range_check(speed):
+            self.control_command(DeviceAdress.STEPPER_MOTOR_42.value, Command.WRITE_DISTANCE_ZERO.value, speed)

@@ -5,8 +5,8 @@ from pymycobot.ultraArm import ultraArm
 # from ultraArm.megaAiKit import megaAikit
 from megaAiKit import megaAikit
 
-aikit = megaAikit("COM9")
-ua = ultraArm("COM6", 115200)
+aikit = megaAikit("COM24")
+# ua = ultraArm("COM6", 115200)
 
 down_x = -6.91
 down_y = 252.1
@@ -197,6 +197,10 @@ def motion_plan(robo_speed, millisecond):
 #     print(aikit.get_tof_distance())
 #     time.sleep(0.5)
 
-aikit.write_steps_by_switch(1, 50)
-time.sleep(5)
-aikit.write_steps_by_switch(0, 50)
+# aikit.write_steps_by_switch(1, 50)
+# time.sleep(5)
+# aikit.write_steps_by_switch(0, 50)
+
+# aikit.write_distance(4,80)
+# aikit.write_distance_zero()
+

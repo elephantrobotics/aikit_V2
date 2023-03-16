@@ -22,8 +22,6 @@ plist = [
 # path1 = os.path.dirname(os.path.split(os.path.abspath(__file__))[0])
 # print(path1)
 
-
-
 ua = ultraArm(plist[0])
 print(plist[0])
 # print(plist[1])
@@ -47,7 +45,7 @@ ua.go_zero()
 
 
 """ultraArm传送带套装点位调试"""
-
+'''
 #识别抓取前物块上方的点
 pre_radaus = [-0.62, 0.0, 0.0]
 pre_angles = [-33.8, -3.44, -2.86, 0.0]
@@ -143,7 +141,7 @@ time.sleep(3)
 # ua.set_gpio_state(1)
 # print('ddd',ua.get_angles_info(),ua.get_coords_info())
 # time.sleep(8)
-
+'''
 
 """ultraArm滑轨套装点位调试"""
 """
@@ -271,3 +269,48 @@ print('after',ua.get_angles_info(),ua.get_coords_info())
 # ua.set_gpio_state(1)
 time.sleep(1)
 """
+
+slider_rail_angles = [
+    [-59, 18.1, 36.29],  # a区域
+    [-71, 10, 20],  # b区域
+    [-85, 5, 41],  # c区域
+    [-101, 5, 41],  # d区域
+]
+
+slider_rail_coords = [
+    [127.86, -212.79, 40.71],  # a区域
+    [72.68, -211.07, 36.18],  # b区域
+    [18.48, -211.18, 37.66],  # c区域
+    [-40.45, -208.09, 37.66],  # d区域
+]
+
+ua.set_radians([-1.42, 0, 0], 80)
+time.sleep(5)
+
+a_radius = [-1.01, 0.28, 0.60]
+a_coords = [131.08, -208.72, 45.88, -57.87]
+ua.set_radians(a_radius, 80)
+time.sleep(6)
+print('a_coords:', ua.get_coords_info())
+time.sleep(3)
+
+b_radius = [-1.24, 0.19, 0.72]
+b_coords = [73.01, -212.63, 35.35, -71.05]
+ua.set_radians(b_radius, 80)
+time.sleep(6)
+print('b_coords:', ua.get_coords_info())
+time.sleep(3)
+
+c_radius = [-1.48, 0.1, 0.72]
+c_coords = [19.33, -212.36, 37.04, -84.8]
+ua.set_radians(c_radius, 80)
+time.sleep(6)
+print('c_coords:', ua.get_coords_info())
+time.sleep(3)
+
+d_radius = [-1.74, 0.1, 0.72]
+d_coords = [-35.89, -210.19, 37.04, -99.69]
+ua.set_radians(d_radius, 80)
+time.sleep(8)
+print('d_coords:', ua.get_coords_info())
+time.sleep(3)
