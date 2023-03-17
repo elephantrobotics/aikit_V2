@@ -61,10 +61,7 @@ class ThreadTof(Thread):
         return self.dist
 
     def set_running_flag(self, flag):
-        print('1:',self.running, flag)
         self.running = flag
-        print('2:',self.running)
-
 
     def get_running_flag(self):
         return self.running
@@ -272,7 +269,6 @@ class Object_detect():
                 break
             except:
                 if i == 2:
-                    print("..")
                     exit(0)
                 pass
         time.sleep(3.5)
