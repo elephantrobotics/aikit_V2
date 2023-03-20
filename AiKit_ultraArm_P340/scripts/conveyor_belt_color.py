@@ -34,8 +34,8 @@ plist = [
 ]
 
 # 初始化距离传感器串口
-kit = megaAikit(plist[1])
-print(plist[0], plist[1])
+# kit = megaAikit(plist[1])
+# print(plist[0], plist[1])
 
 tof_thread = None
 
@@ -71,9 +71,9 @@ class Object_detect():
     def __init__(self, camera_x=263, camera_y=-108):  # 252,-114
 
         # initialize ultraArm
-        self.ua = ultraArm(plist[0], 115200)
+        # self.ua = ultraArm(plist[0], 115200)
 
-        self.ua.go_zero()
+        # self.ua.go_zero()
         # choose place to set cube
         self.color = 0
         # parameters to calculate camera clipping parameters
@@ -86,7 +86,7 @@ class Object_detect():
             "yellow": [np.array([20, 100, 100]), np.array([30, 255, 255])],
             "red": [np.array([0, 43, 46]), np.array([8, 255, 255])],
             "green": [np.array([35, 43, 35]), np.array([90, 255, 255])],
-            "blue": [np.array([100, 43, 46]), np.array([124, 255, 255])],
+            "blue": [np.array([78, 43, 46]), np.array([110, 255, 255])],
             "cyan": [np.array([78, 43, 46]), np.array([99, 255, 255])],
         }
         # use to calculate coord between cube and ultraArm
@@ -314,19 +314,13 @@ class Object_detect():
         There are two Arucos in the Corners, and each aruco contains the pixels of its four corners.
         Determine the center of the aruco by the four corners of the aruco.
         """
-        if len(corners) > 0:
-            if ids is not None:
-                if len(corners) <= 1 or ids[0] == 1:
-                    return None
-                x1 = x2 = y1 = y2 = 0
-                point_11, point_21, point_31, point_41 = corners[0][0]
-                x1, y1 = int((point_11[0] + point_21[0] + point_31[0] + point_41[0]) / 4.0), int(
-                    (point_11[1] + point_21[1] + point_31[1] + point_41[1]) / 4.0)
-                point_1, point_2, point_3, point_4 = corners[1][0]
-                x2, y2 = int((point_1[0] + point_2[0] + point_3[0] + point_4[0]) / 4.0), int(
-                    (point_1[1] + point_2[1] + point_3[1] + point_4[1]) / 4.0)
-                return x1, x2, y1, y2
-        return None
+        if corners is not None and ids is not None and len(corners) == len(ids) == 2 and ids[0] != 1:
+            center_x1, center_y1 = np.mean(corners[0][0], axis=0).astype(int)
+            center_x2, center_y2 = np.mean(corners[1][0], axis=0).astype(int)
+            # print('ce', center_x1, center_x2, center_y1, center_y2)
+            return center_x1, center_x2, center_y1, center_y2
+        else:
+            return None
 
     # set camera clipping parameters    
     def set_cut_params(self, x1, y1, x2, y2):
@@ -369,13 +363,13 @@ class Object_detect():
 
         # set the arrangement of color'HSV
         x = y = 0
+        # transfrom the img to model of gray 将图像转换为灰度模型
+        hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
         for mycolor, item in self.HSV.items():
             # print("mycolor:",mycolor)
             redLower = np.array(item[0])
             redUpper = np.array(item[1])
 
-            # transfrom the img to model of gray 将图像转换为灰度模型
-            hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
             # print("hsv",hsv)
 
             # wipe off all color expect color in range 擦掉所有颜色期望范围内的颜色
@@ -464,7 +458,7 @@ def runs():
     detect = Object_detect()
 
     # init ultraArm
-    detect.run()
+    # detect.run()
 
     _init_ = 20  # 
     init_num = 0
@@ -540,7 +534,7 @@ def runs():
             # calculate real coord between cube and ultraArm
             real_x, real_y = detect.get_position(x, y)
             if num == 20:
-                detect.decide_move(real_sx / 20.0, real_sy / 20.0, detect.color)
+                # detect.decide_move(real_sx / 20.0, real_sy / 20.0, detect.color)
                 num = real_sx = real_sy = 0
 
             else:
