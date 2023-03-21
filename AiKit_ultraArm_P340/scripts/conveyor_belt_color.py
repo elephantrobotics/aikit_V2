@@ -34,8 +34,8 @@ plist = [
 ]
 
 # 初始化距离传感器串口
-# kit = megaAikit(plist[1])
-# print(plist[0], plist[1])
+kit = megaAikit(plist[1])
+print(plist[0], plist[1])
 
 tof_thread = None
 
@@ -71,9 +71,9 @@ class Object_detect():
     def __init__(self, camera_x=263, camera_y=-108):  # 252,-114
 
         # initialize ultraArm
-        # self.ua = ultraArm(plist[0], 115200)
+        self.ua = ultraArm(plist[0], 115200)
 
-        # self.ua.go_zero()
+        self.ua.go_zero()
         # choose place to set cube
         self.color = 0
         # parameters to calculate camera clipping parameters
@@ -458,7 +458,7 @@ def runs():
     detect = Object_detect()
 
     # init ultraArm
-    # detect.run()
+    detect.run()
 
     _init_ = 20  # 
     init_num = 0
@@ -534,7 +534,7 @@ def runs():
             # calculate real coord between cube and ultraArm
             real_x, real_y = detect.get_position(x, y)
             if num == 20:
-                # detect.decide_move(real_sx / 20.0, real_sy / 20.0, detect.color)
+                detect.decide_move(real_sx / 20.0, real_sy / 20.0, detect.color)
                 num = real_sx = real_sy = 0
 
             else:
