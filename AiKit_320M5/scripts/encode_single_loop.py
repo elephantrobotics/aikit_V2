@@ -85,7 +85,7 @@ class Detect_marker():
         ]
         print('real_x, real_y:', round(coords[0][0] + x, 2), round(coords[0][1] + y, 2))
         # send coordinates to move mycobot
-        self.mc.send_angles(angles[1], 50)
+        self.mc.send_angles(angles[2], 50)
         time.sleep(3)
 
         # self.mc.send_coords([coords[0][0]+x, coords[0][1]+y, 240, 178.99, 5.38, -179.9], 20, 0)

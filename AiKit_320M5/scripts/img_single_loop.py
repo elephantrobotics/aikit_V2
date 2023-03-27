@@ -2,7 +2,8 @@ from multiprocessing import Process, Pipe
 import cv2
 import numpy as np
 import time
-import os, sys
+import os
+import sys
 import serial
 import serial.tools.list_ports
 
