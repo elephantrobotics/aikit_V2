@@ -17,11 +17,16 @@ while 1:
 
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
-    lower_blue = np.array([78, 43, 46])
+    # lower_blue = np.array([78, 43, 46])
+    #
+    # upper_blue = np.array([110, 255, 255])
+    #
+    # mask = cv2.inRange(hsv, lower_blue, upper_blue)  # 蓝色掩模
+    lower_yellow = np.array([20, 100, 100])
 
-    upper_blue = np.array([110, 255, 255])
+    upper_yellow = np.array([30, 255, 255])
 
-    mask = cv2.inRange(hsv, lower_blue, upper_blue)  # 蓝色掩模
+    mask = cv2.inRange(hsv, lower_yellow, upper_yellow)  # 黄色掩模
 
     res = cv2.bitwise_and(frame, frame, mask=mask)
 
