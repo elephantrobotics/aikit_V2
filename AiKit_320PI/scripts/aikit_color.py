@@ -15,7 +15,7 @@ __version__ = "1.0"
 
 class Object_detect():
 
-    def __init__(self, camera_x=256, camera_y=5):
+    def __init__(self, camera_x=256, camera_y=0):
         # inherit the parent class
         super(Object_detect, self).__init__()
         # declare mycobot320

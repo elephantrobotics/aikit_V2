@@ -159,7 +159,7 @@ class Detect_marker():
         else:
             self.cache_x = self.cache_y = 0
             # 调整吸泵吸取位置，y增大,向左移动;y减小,向右移动;x增大,前方移动;x减小,向后方移动
-            self.move(x + 105, y + 140, color)
+            self.move(x + 105, y + 130, color)
 
     # init mycobot
     def init_mycobot(self):
