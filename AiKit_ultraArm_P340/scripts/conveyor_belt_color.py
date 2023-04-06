@@ -23,8 +23,8 @@ down_y = 252.1
 down_z_offset = 40
 
 # 传感器上下距离范围
-lower_distance_limit = 245
-upper_distance_limit = 374
+lower_distance_limit = 255 # 245
+upper_distance_limit = 375 # 374
 
 is_detect = False
 
@@ -37,33 +37,38 @@ plist = [
 kit = megaAikit(plist[1])
 print(plist[0], plist[1])
 
+tof_thread = None
 
 # 获取传感器距离的工作接口，延时必须给 0.5
 class ThreadTof(Thread):
     def __init__(self):
-        super().__init__()
+        Thread.__init__(self)
         self.running = True
-        self.dist = None
+        self.dist = kit.get_tof_distance()
 
     def run(self):
         while True:
-            dist = kit.get_tof_distance()
-            if dist is not None:
-                self.dist = dist
-            if not self.running:
-                self.dist = None
+            if self.running:
+                self.dist = kit.get_tof_distance()
+                # print(self.dist)
+            else:
                 break
+            if (20 > self.dist):
+                continue
             time.sleep(0.5)
 
-    def get_tof_dist(self):
+    def distance(self):
         return self.dist
 
-    def set_flag(self, flag):
+    def set_running_flag(self, flag):
         self.running = flag
+
+    def get_running_flag(self):
+        return self.running
 
 
 class Object_detect():
-    def __init__(self, camera_x=244, camera_y=-108):  # 252,-114
+    def __init__(self, camera_x=263, camera_y=-108):  # 252,-114
 
         # initialize ultraArm
         self.ua = ultraArm(plist[0], 115200)
@@ -81,8 +86,8 @@ class Object_detect():
             "yellow": [np.array([20, 100, 100]), np.array([30, 255, 255])],
             "red": [np.array([0, 43, 46]), np.array([8, 255, 255])],
             "green": [np.array([35, 43, 35]), np.array([90, 255, 255])],
-            # "blue": [np.array([100, 43, 46]), np.array([124, 255, 255])],
-            # "cyan": [np.array([78, 43, 46]), np.array([99, 255, 255])],
+            "blue": [np.array([78, 43, 46]), np.array([110, 255, 255])],
+            "cyan": [np.array([78, 43, 46]), np.array([99, 255, 255])],
         }
         # use to calculate coord between cube and ultraArm
         self.sum_x1 = self.sum_x2 = self.sum_y2 = self.sum_y1 = 0
@@ -105,7 +110,9 @@ class Object_detect():
             self.ua.set_gpio_state(1)
 
     # Grasping motion
+    
     def move(self, x, y, color):
+        global tof_thread
         print('x,y:', round(x, 2), round(y, 2))
         print('color index:', color)
         # 移动角度
@@ -146,6 +153,7 @@ class Object_detect():
         time.sleep(3)
         self.ua.set_coords(move_coords[color], 60)  # 0红1绿2蓝3黄
         time.sleep(4)
+
         # close pump
         self.pub_pump(False)
         time.sleep(2)
@@ -154,6 +162,8 @@ class Object_detect():
         self.ua.set_angles(move_angles[1], 60)
         time.sleep(4)
         self.pump_to_send()
+
+        tof_thread.set_running_flag(True)
 
     # decide whether grab cube
     def decide_move(self, x, y, color):
@@ -169,6 +179,7 @@ class Object_detect():
 
     # 从右边获得物块并放到传送带上
     def pump_to_send(self):
+        global tof_thread
         global is_detect
         pump_angles = [
             [91.57, 7.6, 0.16],  # first_point_anges
@@ -176,45 +187,58 @@ class Object_detect():
             [38, 10, -3],  # slide_rail_up_angles
             [38, 15, 23],  # slide_rail_down_angles
         ]
-
+        # print("start thread")
         tof_thread = ThreadTof()
         tof_thread.daemon = True
         tof_thread.start()
         time.sleep(2)
+        current_detect_dist = -1
         down_z = None
 
-        for i in range(0, 5):
+        while 1:
             down_z = default_down_z_postion
             count = -1
             is_detect = False
-            current_detect_dist = tof_thread.get_tof_dist()
-            time.sleep(0.5)
+            if tof_thread.get_running_flag():
+                current_detect_dist = tof_thread.distance()
+                # print("3:",current_detect_dist)
+                time.sleep(0.5)
             print('Current detected distance:', current_detect_dist)
             if lower_distance_limit <= current_detect_dist <= upper_distance_limit:
+                # 停止传感器测距
                 # 最上方木块
-                if 245 <= current_detect_dist <= 285:
+                if 255 <= current_detect_dist <= 310:
                     is_detect = True
                     count = 1
-                elif 286 <= current_detect_dist <= 335:
+                    break
+                elif 311 <= current_detect_dist <= 340:
                     is_detect = True
                     count = 2
-                elif 336 <= current_detect_dist <= 356:
+                    break
+                elif 341 <= current_detect_dist <= 360:
                     is_detect = True
                     count = 3
-                elif 357 <= current_detect_dist <= 374:
+                    break
+                elif 361 <= current_detect_dist <= 375:
                     is_detect = True
                     count = 4
+                    break
             else:
                 print('Detect out of range!')
-                exit(0)
-            if is_detect:
-                if -1 <= count <= 4:
-                    if count == -1:
-                        down_z = default_down_z_postion
-                    elif count == 1:
-                        down_z -= down_z_offset / 2
-                    else:
-                        down_z -= (count * down_z_offset) - (down_z_offset / 2)
+                # exit(0)
+                tof_thread.set_running_flag(True)
+                continue
+
+        if is_detect:
+            tof_thread.set_running_flag(False)
+
+            if -1 <= count <= 4:
+                # if count == -1:
+                #     down_z = default_down_z_postion
+                if count == 1:
+                    down_z -= down_z_offset / 2
+                else:
+                    down_z -= (count * down_z_offset) - (down_z_offset / 2)
         print('Current Z axis point:', down_z)
         # 初始点
         self.ua.set_angles(pump_angles[0], 60)
@@ -237,15 +261,23 @@ class Object_detect():
         # 关闭吸泵
         self.ua.set_gpio_state(1)
         time.sleep(2)
-        # 停止传感器测距
-        tof_thread.set_flag(False)
+        
         # 打开传送带
-        kit.write_steps_by_switch(1, 80)
+        for i in range(5):
+            try:
+                kit.control_conveyor_by_switch(1, 80)
+                break
+            except:
+                if i == 2:
+                    exit(0)
+                pass
         time.sleep(3.5)
         # 关闭传送带
-        kit.write_steps_by_switch(0, 80)
+        kit.control_conveyor_by_switch(0, 80)
+        time.sleep(2)
+        kit.control_conveyor_by_switch(0, 80)
         # 开启传感器测距
-        tof_thread.set_flag(True)
+        # tof_thread.set_running_flag(True)
 
         is_detect = False
 
@@ -282,19 +314,13 @@ class Object_detect():
         There are two Arucos in the Corners, and each aruco contains the pixels of its four corners.
         Determine the center of the aruco by the four corners of the aruco.
         """
-        if len(corners) > 0:
-            if ids is not None:
-                if len(corners) <= 1 or ids[0] == 1:
-                    return None
-                x1 = x2 = y1 = y2 = 0
-                point_11, point_21, point_31, point_41 = corners[0][0]
-                x1, y1 = int((point_11[0] + point_21[0] + point_31[0] + point_41[0]) / 4.0), int(
-                    (point_11[1] + point_21[1] + point_31[1] + point_41[1]) / 4.0)
-                point_1, point_2, point_3, point_4 = corners[1][0]
-                x2, y2 = int((point_1[0] + point_2[0] + point_3[0] + point_4[0]) / 4.0), int(
-                    (point_1[1] + point_2[1] + point_3[1] + point_4[1]) / 4.0)
-                return x1, x2, y1, y2
-        return None
+        if corners is not None and ids is not None and len(corners) == len(ids) == 2 and ids[0] != 1:
+            center_x1, center_y1 = np.mean(corners[0][0], axis=0).astype(int)
+            center_x2, center_y2 = np.mean(corners[1][0], axis=0).astype(int)
+            # print('ce', center_x1, center_x2, center_y1, center_y2)
+            return center_x1, center_x2, center_y1, center_y2
+        else:
+            return None
 
     # set camera clipping parameters    
     def set_cut_params(self, x1, y1, x2, y2):
@@ -337,13 +363,13 @@ class Object_detect():
 
         # set the arrangement of color'HSV
         x = y = 0
+        # transfrom the img to model of gray 将图像转换为灰度模型
+        hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
         for mycolor, item in self.HSV.items():
             # print("mycolor:",mycolor)
             redLower = np.array(item[0])
             redUpper = np.array(item[1])
 
-            # transfrom the img to model of gray 将图像转换为灰度模型
-            hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
             # print("hsv",hsv)
 
             # wipe off all color expect color in range 擦掉所有颜色期望范围内的颜色
@@ -403,13 +429,13 @@ class Object_detect():
                         self.color = 0
                         break
 
-                    # elif mycolor == "cyan":
-                    #     self.color = 2
-                    #     break
+                    elif mycolor == "cyan":
+                        self.color = 2
+                        break
 
-                    # elif mycolor == "blue":
-                    #     self.color = 2
-                    #     break
+                    elif mycolor == "blue":
+                        self.color = 2
+                        break
                     elif mycolor == "green":
                         self.color = 1
                         break
