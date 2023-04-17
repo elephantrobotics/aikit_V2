@@ -375,7 +375,7 @@ def camera_status():
     global status
     status = True
     cap_num = 0
-    cap = cv2.VideoCapture(cap_num)
+    cap = cv2.VideoCapture(cap_num, cv2.CAP_DSHOW)
     
     
     
@@ -406,7 +406,7 @@ def runs():
 
     while cv2.waitKey(1)<0:
         if not status:
-            cap = cv2.VideoCapture(cap_num)
+            cap = cv2.VideoCapture(cap_num, cv2.CAP_DSHOW)
             status = True
             print("请将可识别物体放置摄像头窗口进行拍摄")
             print("Please place an identifiable object in the camera window for shooting")

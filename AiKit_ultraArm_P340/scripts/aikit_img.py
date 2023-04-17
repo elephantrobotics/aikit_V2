@@ -372,8 +372,8 @@ def process_display_frame(connection):
             cap.open(1)
     elif platform.system() == "Linux":
         cap_num = 0
-        # cap = cv2.VideoCapture(cap_num, cv2.CAP_V4L)
-        cap = cv2.VideoCapture(cap_num, cv2.CAP_DSHOW)
+        cap = cv2.VideoCapture(cap_num, cv2.CAP_V4L)
+        # cap = cv2.VideoCapture(cap_num, cv2.CAP_DSHOW)
         if not cap.isOpened():
             cap.open()
             

@@ -302,14 +302,12 @@ if __name__ == "__main__":
     # open the camera
     if platform.system() == "Windows":
         cap_num = 1
-        # cap = cv2.VideoCapture(cap_num, cv2.CAP_V4L)
-        cap = cv2.VideoCapture(cap_num)
+        cap = cv2.VideoCapture(cap_num, cv2.CAP_DSHOW)
         if not cap.isOpened():
             cap.open(1)
     elif platform.system() == "Linux":
         cap_num = 0
-        # cap = cv2.VideoCapture(cap_num, cv2.CAP_V4L)
-        cap = cv2.VideoCapture(cap_num)
+        cap = cv2.VideoCapture(cap_num, cv2.CAP_V4L)
         if not cap.isOpened():
             cap.open()
             

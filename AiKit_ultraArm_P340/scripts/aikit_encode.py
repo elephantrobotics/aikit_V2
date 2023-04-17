@@ -23,7 +23,7 @@ class Detect_marker():
         self.cache_x = self.cache_y = 0
         # Creating a Camera Object
         cap_num = 1
-        self.cap = cv.VideoCapture(cap_num)
+        self.cap = cv.VideoCapture(cap_num, cv.CAP_DSHOW)
         
         # choose place to set cube
         self.color = 0
