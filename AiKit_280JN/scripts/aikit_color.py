@@ -2,7 +2,8 @@
 import cv2
 import numpy as np
 import time
-import os, sys
+import os
+import sys
 
 from pymycobot.mycobot import MyCobot
 
@@ -10,12 +11,9 @@ IS_CV_4 = cv2.__version__[0] == '4'
 __version__ = "1.0"
 
 
-# Adaptive seeed
-
-
 class Object_detect():
 
-    def __init__(self, camera_x=155, camera_y=15):
+    def __init__(self, camera_x=160, camera_y=-5):
         # inherit the parent class
         super(Object_detect, self).__init__()
         # declare mycobot280
@@ -24,15 +22,15 @@ class Object_detect():
         # 移动角度
         self.move_angles = [
             [0.61, 45.87, -92.37, -41.3, 2.02, 9.58],  # init the point
-            [18.8, -7.91, -54.49, -23.02, -0.79, -14.76],  # point to grab
+            [18.63, 5.39, -83.49, -10.37, -0.08, -13.44],  # point to grab
         ]
 
         # 移动坐标
         self.move_coords = [
-            [132.2, -136.9, 200.8, -178.24, -3.72, -107.17],  # D Sorting area
-            [238.8, -124.1, 204.3, -169.69, -5.52, -96.52],  # C Sorting area
-            [115.8, 177.3, 210.6, 178.06, -0.92, -6.11],  # A Sorting area
-            [-6.9, 173.2, 201.5, 179.93, 0.63, 33.83],  # B Sorting area
+            [133.5, -149.5, 153.0, -178.91, -1.27, -112.78],  # D Sorting area
+            [242.5, -143.1, 164.3, -172.38, -4.38, -100.28],  # C Sorting area
+            [133.5, 168.0, 172.2, -175.89, -1.86, -13.65],  # A Sorting area
+            [21.6, 176.3, 171.4, -178.53, -1.69, 21.75],  # B Sorting area
         ]
 
         # which robot: USB* is m5; ACM* is wio; AMA* is raspi
@@ -70,11 +68,11 @@ class Object_detect():
         self.cache_x = self.cache_y = 0
         # set color HSV
         self.HSV = {
-            "yellow": [np.array([11, 85, 70]), np.array([59, 255, 245])],
+            "yellow": [np.array([15, 50, 50]), np.array([50, 255, 255])],
             # "yellow": [np.array([22, 93, 0]), np.array([45, 255, 245])],
             "red": [np.array([0, 43, 46]), np.array([8, 255, 255])],
             "green": [np.array([35, 43, 35]), np.array([90, 255, 255])],
-            "blue": [np.array([100, 43, 46]), np.array([124, 255, 255])],
+            "blue": [np.array([78, 43, 46]), np.array([110, 255, 255])],
             "cyan": [np.array([78, 43, 46]), np.array([99, 255, 255])],
         }
 
@@ -128,13 +126,9 @@ class Object_detect():
         time.sleep(3)
 
         # send coordinates to move mycobot
-        self.mc.send_coords([x, y, 170.6, 179.87, -3.78, -62.75], 25, 1)  # usb :rx,ry,rz -173.3, -5.48, -57.9
+        self.mc.send_coords([x, y, 160, 179.87, -3.78, -62.75], 25, 1)  # usb :rx,ry,rz -173.3, -5.48, -57.9
         time.sleep(3)
-
-        # self.mc.send_coords([x, y, 150, 179.87, -3.78, -62.75], 25, 0)
-        # time.sleep(3)
-
-        self.mc.send_coords([x, y, 103, 179.87, -3.78, -62.75], 25, 0)
+        self.mc.send_coords([x, y, 70, 179.87, -3.78, -62.75], 25, 0)
         time.sleep(3)
 
         # open pump
@@ -153,8 +147,8 @@ class Object_detect():
         time.sleep(0.5)
 
         # print(tmp)
-        self.mc.send_angles([tmp[0], -0.71, -54.49, -23.02, -0.79, tmp[5]],
-                            25)  # [18.8, -7.91, -54.49, -23.02, -0.79, -14.76]
+        self.mc.send_angles([tmp[0], 5.39, -83.49, -10.37, -0.08, tmp[5]],
+                            25)  # [18.63, 5.39, -83.49, -10.37, -0.08, -13.44]
         time.sleep(3)
 
         self.mc.send_coords(self.move_coords[color], 25, 1)
@@ -163,7 +157,6 @@ class Object_detect():
         time.sleep(3)
 
         # close pump
-
         if "dev" in self.robot_m5 or "dev" in self.robot_wio:
             self.pump_off()
         elif "dev" in self.robot_raspi or "dev" in self.robot_jes:

@@ -48,7 +48,7 @@ class Detect_marker():
 
         # Creating a Camera Object
         cap_num = 0
-        self.cap = cv2.VideoCapture(cap_num)
+        self.cap = cv2.VideoCapture(cap_num, cv2.CAP_V4L)
         self.cap.set(3, 640)
         self.cap.set(4, 480)
 
@@ -85,15 +85,15 @@ class Detect_marker():
 
         angles = [
             [0.61, 45.87, -92.37, -41.3, 2.02, 9.58],  # init to point
-            [18.8, -7.91, -54.49, -23.02, -0.79, -14.76],
+            [18.63, 5.39, -83.49, -10.37, -0.08, -13.44],
         ]
 
         coords = [
             [145.0, -65.5, 280.1, 178.99, 7.67, -179.9],  # 初始化点 init point
-            [115.8, 177.3, 210.6, 178.06, -0.92, -6.11],  # A分拣区 A sorting area
-            [-6.9, 173.2, 201.5, 179.93, 0.63, 33.83],  # B分拣区  B sorting area
-            [238.8, -124.1, 204.3, -169.69, -5.52, -96.52],  # C分拣区 C sorting area
-            [132.2, -136.9, 200.8, -178.24, -3.72, -107.17],  # D分拣区 D sorting area
+            [133.5, 168.0, 172.2, -175.89, -1.86, -13.65],  # A分拣区 A sorting area
+            [21.6, 176.3, 171.4, -178.53, -1.69, 21.75],  # B分拣区  B sorting area
+            [242.5, -143.1, 164.3, -172.38, -4.38, -100.28],  # C分拣区 C sorting area
+            [133.5, -149.5, 153.0, -178.91, -1.27, -112.78],  # D分拣区 D sorting area
 
         ]
         print('real_x, real_y:', round(coords[0][0] + x, 2), round(coords[0][1] + y, 2))
@@ -103,11 +103,11 @@ class Detect_marker():
 
         # self.mc.send_coords([coords[0][0]+x, coords[0][1]+y, 240, 178.99, 5.38, -179.9], 20, 0)
         # time.sleep(2)
-        self.mc.send_coords([coords[0][0] + x, coords[0][1] + y, 200, 178.99, -3.78, -62.9], 25, 0)
+        self.mc.send_coords([coords[0][0] + x, coords[0][1] + y, 160, 178.99, -3.78, -62.9], 25, 0)
         time.sleep(2)
         # self.mc.send_coords([coords[0][0]+x, coords[0][1]+y, 105, 178.99, -3.78, -62.9], 25, 0)
         # time.sleep(2)
-        self.mc.send_coords([coords[0][0] + x, coords[0][1] + y, 65.5, 178.99, -3.78, -62.9], 25, 0)
+        self.mc.send_coords([coords[0][0] + x, coords[0][1] + y, 30, 178.99, -3.78, -62.9], 25, 0)
         time.sleep(3.5)
 
         # open pump
@@ -124,8 +124,8 @@ class Detect_marker():
         time.sleep(0.5)
 
         # print(tmp)
-        self.mc.send_angles([tmp[0], -0.71, -54.49, -23.02, -0.79, tmp[5]],
-                            25)  # [18.8, -7.91, -54.49, -23.02, -0.79, -14.76]
+        self.mc.send_angles([tmp[0], 5.39, -83.49, -10.37, -0.08, tmp[5]],
+                            25)  # [18.63, 5.39, -83.49, -10.37, -0.08, -13.44]
         time.sleep(3)
         # 抓取后放置区域
         self.mc.send_coords(coords[color], 25, 1)  # coords[1] 为A分拣区，coords[2] 为B分拣区, coords[3] 为C分拣区，coords[4] 为D分拣区
