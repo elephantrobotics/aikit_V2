@@ -2,6 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
+      <module fileurl="file://D:/BaiduSyncdisk/PythonProject/PyQt6/.idea/PyQt6.iml" filepath="D:/BaiduSyncdisk/PythonProject/PyQt6/.idea/PyQt6.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/aikit_V2.iml" filepath="$PROJECT_DIR$/.idea/aikit_V2.iml" />
     </modules>
   </component>
