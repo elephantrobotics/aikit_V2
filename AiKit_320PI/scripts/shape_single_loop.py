@@ -246,7 +246,7 @@ class Object_detect():
     def set_params(self, c_x, c_y, ratio):
         self.c_x = c_x
         self.c_y = c_y
-        self.ratio = 220.0 / ratio
+        self.ratio = 320.0 / ratio
 
     # calculate the coords between cube and mycobot320
     def get_position(self, x, y):
