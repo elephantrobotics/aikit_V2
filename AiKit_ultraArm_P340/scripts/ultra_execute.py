@@ -3,10 +3,10 @@ from threading import Thread
 import time
 from pymycobot.ultraArm import ultraArm
 # from ultraArm.megaAiKit import megaAikit
-from megaAiKit import megaAikit
+from ConveyorMain import ConveyorMain
 
-aikit = megaAikit("COM9")
-ua = ultraArm("COM6", 115200)
+aikit = ConveyorMain("COM6")
+# ua = ultraArm("COM12", 115200)
 
 down_x = -6.91
 down_y = 252.1
@@ -193,10 +193,11 @@ def motion_plan(robo_speed, millisecond):
 
 # motion_plan(95, 1)
 
-# while True:
-#     print(aikit.get_tof_distance())
-#     time.sleep(0.5)
+while True:
+    print(aikit.get_tof_distance())
+    time.sleep(0.5)
 
-aikit.write_steps_by_switch(1, 50)
-time.sleep(5)
-aikit.write_steps_by_switch(0, 50)
+# aikit.control_conveyor_by_switch(1, 50)
+# time.sleep(5)
+# aikit.control_conveyor_by_switch(0, 50)
+# print(aikit.get_tof_distance())

@@ -10,7 +10,7 @@ import time
 from threading import Thread
 import serial
 import serial.tools.list_ports
-from megaAiKit import megaAikit
+from ConveyorMain import ConveyorMain
 
 IS_CV_4 = cv2.__version__[0] == '4'
 
@@ -34,7 +34,7 @@ plist = [
 ]
 
 # 初始化距离传感器串口
-kit = megaAikit(plist[1])
+kit = ConveyorMain(plist[1])
 print(plist[0], plist[1])
 
 tof_thread = None

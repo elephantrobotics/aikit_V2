@@ -271,3 +271,16 @@ print('after',ua.get_angles_info(),ua.get_coords_info())
 # ua.set_gpio_state(1)
 time.sleep(1)
 """
+import serial
+
+s = serial.Serial()
+s.baudrate = 115200
+s.port = "com6"
+s.rts = False
+s.dtr = False
+s.open()
+
+s.write([0xff,0xff, 0x21,0x00,0x51, 0x51])
+
+while True:
+    print(s.read())
