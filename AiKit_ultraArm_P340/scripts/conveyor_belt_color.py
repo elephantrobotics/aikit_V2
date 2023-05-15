@@ -10,21 +10,24 @@ import time
 from threading import Thread
 import serial
 import serial.tools.list_ports
-from megaAiKit import megaAikit
+from ConveyorMain import ConveyorMain
 
 IS_CV_4 = cv2.__version__[0] == '4'
 
 # 距离传感器处的默认初始点坐标值
 # z轴
-default_down_z_postion = 126.47
-down_x = -6.91
-down_y = 252.1
+# default_down_z_postion = 124.32
+default_down_z_postion = 123.82
+down_x = 28.41
+down_y = 230.7
 # 木块大小为40 mm，故木块与木块之间的偏移量为40 mm
 down_z_offset = 40
 
 # 传感器上下距离范围
-lower_distance_limit = 255 # 245
-upper_distance_limit = 375 # 374
+# lower_distance_limit = 255 # 245
+# upper_distance_limit = 375 # 374
+lower_distance_limit = 315
+upper_distance_limit = 399
 
 is_detect = False
 
@@ -34,10 +37,13 @@ plist = [
 ]
 
 # 初始化距离传感器串口
-kit = megaAikit(plist[1])
+kit = ConveyorMain(plist[1])
+ua = ultraArm(plist[0], 115200)
 print(plist[0], plist[1])
+ua.go_zero()
 
 tof_thread = None
+
 
 # 获取传感器距离的工作接口，延时必须给 0.5
 class ThreadTof(Thread):
@@ -71,9 +77,9 @@ class Object_detect():
     def __init__(self, camera_x=263, camera_y=-108):  # 252,-114
 
         # initialize ultraArm
-        self.ua = ultraArm(plist[0], 115200)
+        self.ua = ua
 
-        self.ua.go_zero()
+        # self.ua.go_zero()
         # choose place to set cube
         self.color = 0
         # parameters to calculate camera clipping parameters
@@ -102,7 +108,7 @@ class Object_detect():
         # Get ArUco marker params.
         self.aruco_params = cv2.aruco.DetectorParameters_create()
 
-    # 控制吸泵      
+    # 控制吸泵
     def pub_pump(self, flag):
         if flag:
             self.ua.set_gpio_state(0)
@@ -110,7 +116,7 @@ class Object_detect():
             self.ua.set_gpio_state(1)
 
     # Grasping motion
-    
+
     def move(self, x, y, color):
         global tof_thread
         print('x,y:', round(x, 2), round(y, 2))
@@ -118,16 +124,26 @@ class Object_detect():
         # 移动角度
         move_angles = [
             [0.0, 0.0, 0.0],  # init the point
-            [25.55, 0.0, 15.24],  # 第二初始点
-            [-33.8, -3.44, -2.86, 0.0],  # 识别抓取前物块上方的点
-            [-33.8, 10.89, 29.79, 0.0],  # 抓取物块的点
-            [-80.21, 0.0, 9.74, 0.0],  # 识别抓取之后的缓冲点
+            # [25.55, 0.0, 15.24],  # 第二初始点
+            # [-33.8, -3.44, -2.86, 0.0],  # 识别抓取前物块上方的点
+            # [-33.8, 10.89, 29.79, 0.0],  # 抓取物块的点
+            # [-80.21, 0.0, 9.74, 0.0],  # 识别抓取之后的缓冲点
+            [4.55, 0.0, 10.24],
+            [-24.8, 18.9, 0],
+            [-25.12, 23.5, 24.89],
+            [-83.59, 0.0, 9.74, 0.0],
             [0.0, 14.32, 0.0],  # point to grab
+        ]
+
+        move_coords_detect = [
+            [251.08, -96, 120],
+            [251.08, -96, 61.5]
+
         ]
 
         # 移动坐标
         move_coords = [
-            [99.13, -226.06, 37.44, -65.32], # A区域
+            [99.13, -226.06, 37.44, -65.32],  # A区域
             [46.88, -230.44, 26.34, -78.5],  # B区域
             [-9.23, -234.98, 26.34, -92.25],  # C区域
             [-64.36, -233.34, 32.15, -105.42],  # D区域
@@ -136,16 +152,21 @@ class Object_detect():
         # move to ultraArm
         # 到达物块上方
         # self.ua.set_angles(move_angles[2], 50)
-        self.ua.set_coords([x, y, 130], 60)
+        # self.ua.set_coords([x, y, 130], 60)
+        self.ua.set_coords(move_coords_detect[0], 60)
         self.ua.sleep(1.5)
 
         # 抓取物块
-        # self.ua.set_angles(move_angles[3], 30)
+        # self.ua.set_angles(move_angles[3], 60)
+        self.ua.set_coords(move_coords_detect[1], 60)
+
         # self.ua.set_coords([200.32, -134.1, 58.1, -33.8], 60)
-        self.ua.set_coords([x, y, 59], 60)
+        # self.ua.set_coords([x, y, 0], 60)
+        # print('x,y:',x,y)
+        # self.ua.set_angles(move_angles[2], 60)
         self.ua.sleep(2)
         # open pump
-        self.pub_pump(True)
+        self.pub_pump(False)
         time.sleep(2)
         self.ua.set_angles(move_angles[2], 60)
         time.sleep(3)
@@ -155,7 +176,7 @@ class Object_detect():
         time.sleep(4)
 
         # close pump
-        self.pub_pump(False)
+        self.pub_pump(True)
         time.sleep(2)
         self.ua.set_angles(move_angles[4], 60)
         time.sleep(3)
@@ -182,10 +203,16 @@ class Object_detect():
         global tof_thread
         global is_detect
         pump_angles = [
-            [91.57, 7.6, 0.16],  # first_point_anges
-            [91.57, 0, 0],  # leave_to_default_angles
-            [38, 10, -3],  # slide_rail_up_angles
-            [38, 15, 23],  # slide_rail_down_angles
+            # [91.57, 7.6, 0.16],  # first_point_anges
+            # [91.57, 0, 0],  # leave_to_default_angles
+            # [38, 10, -3],  # slide_rail_up_angles
+            # [38, 15, 23],  # slide_rail_down_angles
+            # [4.55, 0.0, 10.24],
+            [82.17, -1.32, 2.31],
+            [82.98, -1.32, 0],
+            [36, 29.57, -3],
+            [35, 29.57, 16.45],
+            [4.55, 0.0, 10.24],
         ]
         # print("start thread")
         tof_thread = ThreadTof()
@@ -207,19 +234,19 @@ class Object_detect():
             if lower_distance_limit <= current_detect_dist <= upper_distance_limit:
                 # 停止传感器测距
                 # 最上方木块
-                if 255 <= current_detect_dist <= 310:
+                if lower_distance_limit <= current_detect_dist <= 355:
                     is_detect = True
                     count = 1
                     break
-                elif 311 <= current_detect_dist <= 340:
+                elif 360 <= current_detect_dist <= 375:
                     is_detect = True
                     count = 2
                     break
-                elif 341 <= current_detect_dist <= 360:
+                elif 376 <= current_detect_dist <= 390:
                     is_detect = True
                     count = 3
                     break
-                elif 361 <= current_detect_dist <= 375:
+                elif 391 <= current_detect_dist <= upper_distance_limit:
                     is_detect = True
                     count = 4
                     break
@@ -244,13 +271,20 @@ class Object_detect():
         self.ua.set_angles(pump_angles[0], 60)
         # 吸取的上下动作，吸取时打开吸泵
         # 下
-        self.ua.set_coords([down_x, down_y, down_z], 60)
+        self.ua.set_coords([down_x + 1.5, down_y + 1, down_z], 60)
         time.sleep(2)
         # 打开吸泵
-        self.ua.set_gpio_state(0)
+        self.ua.set_gpio_state(1)
         time.sleep(2)
         # 上
-        self.ua.set_angles(pump_angles[1], 60)
+        # self.ua.set_angles(pump_angles[1], 60)
+        if count == 4:
+            self.ua.set_coords([down_x + 1.5, down_y + 1, down_z + 80], 60)
+
+        elif count == 3:
+            self.ua.set_coords([down_x + 1.5, down_y + 1, down_z + 40], 60)
+        else:
+            self.ua.set_coords([down_x + 1.5, down_y + 1, down_z + 10], 60)
         time.sleep(2)
         # 移动到指定默认的滑轨上方位置
         self.ua.set_angles(pump_angles[2], 60)
@@ -259,9 +293,12 @@ class Object_detect():
         self.ua.set_angles(pump_angles[3], 60)
         time.sleep(3)
         # 关闭吸泵
-        self.ua.set_gpio_state(1)
+        self.ua.set_gpio_state(0)
         time.sleep(2)
-        
+        # 到中间位置
+        self.ua.set_angles(pump_angles[4], 60)
+        time.sleep(2)
+
         # 打开传送带
         for i in range(5):
             try:
@@ -278,6 +315,7 @@ class Object_detect():
         kit.control_conveyor_by_switch(0, 80)
         # 开启传感器测距
         # tof_thread.set_running_flag(True)
+        tof_thread.set_running_flag(False)
 
         is_detect = False
 
@@ -304,25 +342,27 @@ class Object_detect():
     def get_calculate_params(self, img):
         # Convert the image to a gray image
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
         # Detect ArUco marker.
         corners, ids, rejectImaPoint = cv2.aruco.detectMarkers(
             gray, self.aruco_dict, parameters=self.aruco_params
         )
-
         """
         Two Arucos must be present in the picture and in the same order.
         There are two Arucos in the Corners, and each aruco contains the pixels of its four corners.
         Determine the center of the aruco by the four corners of the aruco.
         """
-        if corners is not None and ids is not None and len(corners) == len(ids) == 2 and ids[0] != 1:
+        if corners is not None and ids is not None and len(corners) == len(ids) == 2:
             center_x1, center_y1 = np.mean(corners[0][0], axis=0).astype(int)
             center_x2, center_y2 = np.mean(corners[1][0], axis=0).astype(int)
+            print("corners[0]:", corners[0])
+            print("coners[1]:", corners[1])
             # print('ce', center_x1, center_x2, center_y1, center_y2)
             return center_x1, center_x2, center_y1, center_y2
         else:
             return None
 
-    # set camera clipping parameters    
+    # set camera clipping parameters
     def set_cut_params(self, x1, y1, x2, y2):
         self.x1 = int(x1)
         self.y1 = int(y1) + 360
@@ -330,11 +370,11 @@ class Object_detect():
         self.y2 = int(y2)
         # print(self.x1, self.y1, self.x2, self.y2)
 
-    # set parameters to calculate the coords between cube and ultraArm   
+    # set parameters to calculate the coords between cube and ultraArm
     def set_params(self, c_x, c_y, ratio):
         self.c_x = c_x
         self.c_y = c_y
-        self.ratio = 98.0 / ratio
+        self.ratio = 98 / ratio
 
     # calculate the coords between cube and ultraArm
     def get_position(self, x, y):
@@ -353,9 +393,9 @@ class Object_detect():
         fx = 1.5
         fy = 1.5
         frame = cv2.resize(frame, (0, 0), fx=fx, fy=fy, interpolation=cv2.INTER_CUBIC)
-        if self.x1 != self.x2:
-            # the cutting ratio here is adjusted according to the actual situation
-            frame = frame[int(self.y2 * 0.2):int(self.y1 * 0.7), int(self.x1 * 0.8):int(self.x2 * 1.1)]
+        # if self.x1 != self.x2:
+        # the cutting ratio here is adjusted according to the actual situation
+        # frame = frame[int(self.y2 * 0.2):int(self.y1 * 0.7), int(self.x1 * 0.8):int(self.x2 * 1.1)]
         return frame
 
     # detect cube color
@@ -401,10 +441,11 @@ class Object_detect():
                 boxes = [
                     box
                     for box in [cv2.boundingRect(c) for c in contours]
-                    if min(img.shape[0], img.shape[1]) / 10
+                    if min(img.shape[0], img.shape[1]) / 8
                        < min(box[2], box[3])
                        < min(img.shape[0], img.shape[1]) / 1
                 ]
+
                 if boxes:
                     for box in boxes:
                         x, y, w, h = box
@@ -416,7 +457,10 @@ class Object_detect():
                     # locate the target by drawing rectangle 通过绘制矩形来定位目标
                     cv2.rectangle(img, (x, y), (x + w, y + h), (153, 153, 0), 2)
                     # calculate the rectangle center 计算矩形中心
-                    x, y = (x * 2 + w) / 2, (y * 2 + h) / 2
+
+                    # x, y = (x * 2 + w) / 2, (y * 2 + h) / 2
+                    x, y = (x + w) / 2, (y + h) / 2
+
                     # calculate the real coordinates of ultraArm P340 relative to the target
                     #  计算 ultraArm 相对于目标的真实坐标
 
@@ -450,7 +494,8 @@ class Object_detect():
 def runs():
     # open the camera
     cap_num = 1
-    cap = cv2.VideoCapture(cap_num)
+    cap = cv2.VideoCapture(cap_num, cv2.CAP_DSHOW)
+
     if not cap.isOpened():
         cap.open()
 
@@ -460,15 +505,19 @@ def runs():
     # init ultraArm
     detect.run()
 
-    _init_ = 20  # 
+    _init_ = 20  #
     init_num = 0
     nparams = 0
     num = 0
     real_sx = real_sy = 0
+
+    count_num = [25, 75, 100]
+    conveyor = Object_detect()
+
     while cv2.waitKey(1) < 0:
         # read camera
         _, frame = cap.read()
-        # deal img
+
         frame = detect.transform_frame(frame)
 
         if _init_ > 0:
@@ -478,7 +527,12 @@ def runs():
         if init_num < 20:
             if detect.get_calculate_params(frame) is None:
                 cv2.imshow("figure", frame)
+                count_num[0] -= 1
+                if count_num[0] == 0:
+                    conveyor.pump_to_send()
+                    tof_thread.set_running_flag(True)
                 continue
+            # if here not detect maker, so it can't cut
             else:
                 x1, x2, y1, y2 = detect.get_calculate_params(frame)
                 detect.sum_x1 += x1
@@ -502,6 +556,11 @@ def runs():
         if nparams < 10:
             if detect.get_calculate_params(frame) is None:
                 cv2.imshow("figure", frame)
+                count_num[1] -= 1
+                if count_num[1] == 0:
+                    conveyor.pump_to_send()
+                    tof_thread.set_running_flag(True)
+
                 continue
             else:
                 x1, x2, y1, y2 = detect.get_calculate_params(frame)
@@ -528,6 +587,10 @@ def runs():
         if detect_result is None:
             # detect.stop_or_run(False)
             cv2.imshow("figure", frame)
+            count_num[2] -= 1
+            if count_num[2] == 0:
+                conveyor.pump_to_send()
+                tof_thread.set_running_flag(True)
             continue
         else:
             x, y = detect_result
@@ -535,6 +598,7 @@ def runs():
             real_x, real_y = detect.get_position(x, y)
             if num == 20:
                 detect.decide_move(real_sx / 20.0, real_sy / 20.0, detect.color)
+                # print("x,y",real_y,real_x)
                 num = real_sx = real_sy = 0
 
             else:
