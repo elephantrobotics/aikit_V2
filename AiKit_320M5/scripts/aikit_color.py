@@ -108,10 +108,10 @@ class Object_detect():
         time.sleep(3)
 
         # send coordinates to move mycobot
-        self.mc.send_coords([x, y, 250, -173.84, -0.14, -74.37], 50, 0)
+        self.mc.send_coords([x, y, 250, -173.84, -0.14, -74.37], 50, 1)
         time.sleep(2.5)
 
-        self.mc.send_coords([x, y, 143, -173.84, -0.14, -74.37], 50, 0)
+        self.mc.send_coords([x, y, 143, -173.84, -0.14, -74.37], 50, 1)
         time.sleep(3)
 
         # open pump

@@ -86,9 +86,9 @@ class Detect_marker():
         # send coordinates to move mycobot
         self.mc.send_angles(angles[2], 50)
         time.sleep(3)
-        self.mc.send_coords([coords[0][0] + x, coords[0][1] + y, 240, 178.99, -3.78, -62.9], 50, 0)
+        self.mc.send_coords([coords[0][0] + x, coords[0][1] + y, 240, 178.99, -3.78, -62.9], 50, 1)
         time.sleep(2)
-        self.mc.send_coords([coords[0][0] + x, coords[0][1] + y, 100.5, 178.99, -3.78, -62.9], 50, 0)
+        self.mc.send_coords([coords[0][0] + x, coords[0][1] + y, 100.5, 178.99, -3.78, -62.9], 50, 1)
         time.sleep(2.5)
 
         # open pump
