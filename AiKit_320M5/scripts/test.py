@@ -72,12 +72,20 @@ radians_ = [
 
 init_ = [0.29, -0.07, -0.90, -0.44, 1.57, 0.0]
 
-mc.send_radians(init_, 50)
-time.sleep(6)
+# mc.set_gripper_state(0, 100)
+mc.set_gripper_value(100, 100)
+time.sleep(3)
+mc.set_gripper_state(1, 100)
+time.sleep(2)
+
+# mc.send_radians(init_, 50)
+# time.sleep(6)
 print('init:', mc.get_coords(), mc.get_angles())
 time.sleep(3)
-#
-# mc.send_radians(radians_[0], 50)
+# mc.send_angles([17.22, -5.27, -52.47, -25.75, 89.73, -0.26], 50)
+# mc.send_coords([245.48, 3.89, 250, -165.54, 2.6, -83.71], 50, 1)
+
+# mc.send_radians(radians_[0], 50)   x,y: 245.48 3.89
 time.sleep(6)
 print('D:', mc.get_coords(), mc.get_angles())
 
