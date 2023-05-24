@@ -72,20 +72,30 @@ radians_ = [
 
 init_ = [0.29, -0.07, -0.90, -0.44, 1.57, 0.0]
 
+coords = [
+            [145.0, -65.5, 280.1, 178.99, 7.67, -179.9],  # 初始化点 init point
+            [244.5, 193.2, 330.3, -160.54, 17.35, -74.59],  # A分拣区 A sorting area
+            [26.1, 235.9, 329.0, -175.56, -15.21, 90.98],  # B分拣区  B sorting area
+            [240.3, -202.2, 317.1, -152.12, -10.15, -95.73],  # C分拣区 C sorting area
+            [37.6, -223.4, 326.3, -173.29, -14.23, -92.43],  # D分拣区 D sorting area   J6 角度： -55.54
+
+        ]
 # mc.set_gripper_state(0, 100)
-mc.set_gripper_value(100, 100)
-time.sleep(3)
-mc.set_gripper_state(1, 100)
-time.sleep(2)
+# mc.set_gripper_value(100, 100)
+# time.sleep(3)
+# mc.set_gripper_state(1, 100)
+# time.sleep(2)
 
 # mc.send_radians(init_, 50)
 # time.sleep(6)
-print('init:', mc.get_coords(), mc.get_angles())
-time.sleep(3)
+# print('init:', mc.get_coords(), mc.get_angles())
+# time.sleep(3)
 # mc.send_angles([17.22, -5.27, -52.47, -25.75, 89.73, -0.26], 50)
 # mc.send_coords([245.48, 3.89, 250, -165.54, 2.6, -83.71], 50, 1)
 
-# mc.send_radians(radians_[0], 50)   x,y: 245.48 3.89
+mc.send_angles(angles, 50)   # x,y: 245.48 3.89
+time.sleep(6)
+# mc.send_coords(coords[1], 40, 1)
 time.sleep(6)
 print('D:', mc.get_coords(), mc.get_angles())
 
