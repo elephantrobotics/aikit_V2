@@ -28,10 +28,10 @@ class Object_detect():
 
         # 移动坐标
         self.move_coords = [
-            [154.8, -210.6, 217.4, -175.54, -3.46, -122.78],  # D Sorting area
-            [280.4, -201.0, 249.2, -157.32, -0.83, -110.8],  # C Sorting area
-            [136.3, 221.4, 244.6, -171.64, 0.48, -11.7],  # A Sorting area
-            [-13.6, 218.7, 225.3, -177.09, 0.84, 27.55],  # B Sorting area
+            [32, -228.3, 201.6, -168.07, -7.17, -92.56],  # D Sorting area
+            [266.5, -219.7, 209.3, -170, -3.64, -94.62],  # C Sorting area
+            [253.8, 236.8, 224.6, -170, 6.87, -77.91],  # A Sorting area
+            [35.9, 235.4, 211.8, -169.33, -9.27, 88.3],  # B Sorting area
         ]
 
         # which robot: USB* is m5; ACM* is wio; AMA* is raspi
@@ -39,27 +39,6 @@ class Object_detect():
         self.robot_wio = os.popen("ls /dev/ttyACM*").readline()[:-1]
         self.robot_raspi = os.popen("ls /dev/ttyAMA*").readline()[:-1]
         self.robot_jes = os.popen("ls /dev/ttyTHS1").readline()[:-1]
-        self.raspi = False
-        if "dev" in self.robot_m5:
-            self.Pin = [2, 5]
-        elif "dev" in self.robot_wio:
-            # self.Pin = [20, 21]
-            self.Pin = [2, 5]
-
-            # for i in self.move_coords:
-            #     i[2] -= 20
-        elif "dev" in self.robot_raspi or "dev" in self.robot_jes:
-            import RPi.GPIO as GPIO
-            GPIO.setwarnings(False)
-            self.GPIO = GPIO
-            GPIO.setmode(GPIO.BCM)
-            GPIO.setup(20, GPIO.OUT)
-            GPIO.setup(21, GPIO.OUT)
-            GPIO.output(20, 1)
-            GPIO.output(21, 1)
-            self.raspi = True
-        if self.raspi:
-            self.gpio_status(False)
 
         # choose place to set cube
         self.color = 0
@@ -81,48 +60,56 @@ class Object_detect():
         # Get ArUco marker params.
         self.aruco_params = cv2.aruco.DetectorParameters_create()
 
-    # pump_control pi
+        # pump_control pi
+
     def gpio_status(self, flag):
         if flag:
-            self.GPIO.output(20, 0)
-            self.GPIO.output(21, 0)
+            """start the suction pump"""
+            self.mc.set_basic_output(1, 0)
+            self.mc.set_basic_output(2, 1)
         else:
-            self.GPIO.output(20, 1)
-            self.GPIO.output(21, 1)
+            """stop suction pump"""
+            self.mc.set_basic_output(1, 1)
+            self.mc.set_basic_output(2, 0)
+            time.sleep(1)
+            self.mc.set_basic_output(2, 1)
 
-    # 开启吸泵 m5
     def pump_on(self):
-        # 让2号位工作
-        self.mc.set_basic_output(2, 0)
-        # 让5号位工作
-        self.mc.set_basic_output(5, 0)
-
-    # 停止吸泵 m5
-    def pump_off(self):
-        # 让2号位停止工作
+        """Start the suction pump"""
+        self.mc.set_basic_output(1, 0)
         self.mc.set_basic_output(2, 1)
-        # 让5号位停止工作
-        self.mc.set_basic_output(5, 1)
 
-    # Grasping motion
+    def pump_off(self):
+        """stop suction pump m5"""
+        self.mc.set_basic_output(1, 1)
+        self.mc.set_basic_output(2, 0)
+        time.sleep(1)
+        self.mc.set_basic_output(2, 1)
+
+        # Grasping motion
+
     def move(self, x, y, color):
+        """
+        Functions that control a series of movements of the robotic arm and grab blocks
+        :param x: The x-axis coordinate of the block relative to the robot arm
+        :param y: The y-axis coordinate of the block relative to the robot arm
+        :param color: The index of where the block is placed(0-C,1-D,2-A,3-B)
+        :return: None
+        """
+        print(color)
         print('x,y:', round(x, 2), round(y, 2))
         # send Angle to move mycobot320
         self.mc.send_angles(self.move_angles[2], 50)
         time.sleep(3)
 
         # send coordinates to move mycobot
-        self.mc.send_coords([x, y, 230, -173.84, -0.14, -74.37], 50, 0)
+        self.mc.send_coords([x, y, 230, -173.84, -0.14, -74.37], 100, 1)
         time.sleep(2.5)
-
-        self.mc.send_coords([x, y, 100, -173.84, -0.14, -74.37], 50, 0)  #
+        self.mc.send_coords([x, y, 100, -173.84, -0.14, -74.37], 100, 1)  #
         time.sleep(3)
 
         # open pump
-        if "dev" in self.robot_m5 or "dev" in self.robot_wio:
-            self.pump_on()
-        elif "dev" in self.robot_raspi or "dev" in self.robot_jes:
-            self.gpio_status(True)
+        self.pump_on()
         time.sleep(1.5)
 
         tmp = []
@@ -133,20 +120,17 @@ class Object_detect():
                 break
         time.sleep(0.5)
 
-        # print(tmp)
+        print(tmp)
         self.mc.send_angles([tmp[0], -0.71, -54.49, -23.02, 89.56, tmp[5]],
-                            50)  # [18.8, -7.91, -54.49, -23.02, -0.79, -14.76]
+                            25)  # [18.8, -7.91, -54.49, -23.02, -0.79, -14.76]
         time.sleep(3)
 
-        self.mc.send_coords(self.move_coords[color], 50, 0)
-        time.sleep(4)
+        self.mc.send_coords(self.move_coords[color], 100, 1)
+        time.sleep(6.5)
 
         # close pump
-        if "dev" in self.robot_m5 or "dev" in self.robot_wio:
-            self.pump_off()
-        elif "dev" in self.robot_raspi or "dev" in self.robot_jes:
-            self.gpio_status(False)
-        time.sleep(5)
+        self.pump_off()
+        time.sleep(6.5)
 
         self.mc.send_angles(self.move_angles[0], 50)
         time.sleep(4.5)
@@ -173,8 +157,7 @@ class Object_detect():
             self.mc = MyCobot(self.robot_m5, 115200)
         elif "dev" in self.robot_raspi:
             self.mc = MyCobot(self.robot_raspi, 115200)
-        if not self.raspi:
-            self.pub_pump(False, self.Pin)
+        self.pump_off()
         self.mc.send_angles([0.61, 45.87, -92.37, -41.3, 89.56, 9.58], 50)
         time.sleep(2.5)
 

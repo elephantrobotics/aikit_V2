@@ -1,12 +1,12 @@
 # encoding: UTF-8
+import platform
+import time
+
 import cv2
 import numpy as np
-from pymycobot.mycobot import MyCobot
-# import RPi.GPIO as GPIO
-import time
 import serial
 import serial.tools.list_ports
-import platform
+from pymycobot.mycobot import MyCobot
 
 # y轴偏移量
 pump_y = -55
@@ -56,22 +56,26 @@ class Detect_marker():
         self.dist_coeffs = np.array(([[3.41360787e-01, -2.52114260e+00, -1.28012469e-03, 6.70503562e-03,
                                        2.57018000e+00]]))
 
-    # 控制吸泵      
+    # 控制吸泵
     def pub_pump(self, flag):
         if flag:
-            self.mc.set_basic_output(2, 0)
-            self.mc.set_basic_output(5, 0)
-        else:
+            """start the suction pump"""
+            self.mc.set_basic_output(1, 0)
             self.mc.set_basic_output(2, 1)
-            self.mc.set_basic_output(5, 1)
+        else:
+            """stop suction pump"""
+            self.mc.set_basic_output(1, 1)
+            self.mc.set_basic_output(2, 0)
+            time.sleep(1)
+            self.mc.set_basic_output(2, 1)
 
-    # 开启夹爪 m5
     def gripper_on(self):
+        """start gripper"""
         self.mc.set_gripper_state(0, 100)
         time.sleep(1.5)
 
-    # 关闭夹爪 m5
     def gripper_off(self):
+        """stop gripper"""
         self.mc.set_gripper_state(1, 100)
         time.sleep(1.5)
 
@@ -88,20 +92,35 @@ class Detect_marker():
 
         coords = [
             [145.0, -65.5, 280.1, 178.99, 7.67, -179.9],  # 初始化点 init point
-            [244.5, 193.2, 330.3, -160.54, 17.35, -74.59],  # A分拣区 A sorting area
-            [26.1, 235.9, 329.0, -175.56, -15.21, 90.98],  # B分拣区  B sorting area
-            [240.3, -202.2, 317.1, -152.12, -10.15, -95.73],  # C分拣区 C sorting area
-            [37.6, -223.4, 326.3, -173.29, -14.23, -92.43],  # D分拣区 D sorting area 
-
+            [253.8, 236.8, 224.6, -170, 6.87, -77.91],  # A分拣区 A sorting area
+            [35.9, 235.4, 211.8, -169.33, -9.27, 88.3],  # B分拣区  B sorting area
+            [266.5, -219.7, 209.3, -170, -3.64, -94.62],  # C分拣区 C sorting area
+            [32, -228.3, 201.6, -168.07, -7.17, -92.56],  # D分拣区 D sorting area
         ]
-        yaw_degrees_opt = yaw_degrees + 8
+
+        if yaw_degrees > 169:
+            yaw_degrees = 169
+        elif yaw_degrees < -169:
+            yaw_degrees = -169
+        else:
+            yaw_degrees = yaw_degrees
+
+        yaw_degrees_opt = yaw_degrees + 5
+
+        if yaw_degrees_opt > 170:
+            yaw_degrees_opt = 170
+        elif yaw_degrees_opt < -173:
+            yaw_degrees_opt = -173
+        else:
+            yaw_degrees_opt = yaw_degrees_opt
+        print('yaw_degrees_opt:', yaw_degrees_opt)
         print('real_x, real_y:', round(coords[0][0] + x, 2), round(coords[0][1] + y, 2))
         # send coordinates to move mycobot
         self.mc.send_angles(angles[2], 50)
         time.sleep(3)
         self.mc.send_angle(6, yaw_degrees_opt, 80)
         self.gripper_on()
-        print('6angles:', self.mc.get_angles()[5], self.mc.get_coords())
+
         time.sleep(2.5)
         tmp_coords = []
         while True:
@@ -111,15 +130,15 @@ class Detect_marker():
                 break
         time.sleep(0.5)
 
-        self.mc.send_coords([coords[0][0] + x, coords[0][1] + y, 250, tmp_coords[3], tmp_coords[4], tmp_coords[5]], 50, 1)  # -169.62, 0.17, -75.32
+        self.mc.send_coords([coords[0][0] + x, coords[0][1] + y, 250, tmp_coords[3], tmp_coords[4], tmp_coords[5]], 100,
+                            1)
         time.sleep(2)
-        self.mc.send_coords([coords[0][0] + x, coords[0][1] + y, 205, tmp_coords[3], tmp_coords[4], tmp_coords[5]], 50, 1)
-        time.sleep(2.5)
+        self.mc.send_coords([coords[0][0] + x, coords[0][1] + y, 203, tmp_coords[3], tmp_coords[4], tmp_coords[5]], 100,
+                            1)
+        time.sleep(3)
 
         # close gripper
         self.gripper_off()
-        # time.sleep(1.5)
-
         tmp = []
         while True:
             if not tmp:
@@ -132,17 +151,18 @@ class Detect_marker():
         self.mc.send_angles([tmp[0], -0.71, -54.49, -23.02, 89.56, tmp[5]], 50)
         time.sleep(3)
         # 抓取后放置区域
-        self.mc.send_coords(coords[color], 50, 1)  # coords[1] 为A分拣区，coords[2] 为B分拣区, coords[3] 为C分拣区，coords[4] 为D分拣区
-        time.sleep(4)
+        self.mc.send_coords(coords[color], 100, 1)  # coords[1] 为A分拣区，coords[2] 为B分拣区, coords[3] 为C分拣区，coords[4] 为D分拣区
+        time.sleep(6.5)
 
         # open gripper
         self.gripper_on()
-        time.sleep(5)
+        time.sleep(6.5)
 
         self.mc.send_angles(angles[0], 50)
         time.sleep(2)
         self.gripper_off()
         # '''
+
     # decide whether grab cube
     def decide_move(self, x, y, color, yaw_degrees):
 

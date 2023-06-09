@@ -1,5 +1,6 @@
-import cv2
 import platform
+
+import cv2
 
 if platform.system() == "Windows":
     cap_num = 1

@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-import cv2
 import platform
-import numpy as np
-import time
 import sys
+import time
+
+import cv2
+import numpy as np
 import serial
 import serial.tools.list_ports
-
 from pymycobot.mycobot import MyCobot
 
 IS_CV_4 = cv2.__version__[0] == '4'
@@ -31,16 +31,16 @@ class Object_detect():
         self.move_angles = [
             [0.61, 45.87, -92.37, -32.16, 89.56, 1.66],  # init the point
             [18.8, -7.91, -54.49, -23.02, 89.56, -14.76],  # point to grab
-            [16.96, -5.27, -52.38, -17.66, 89.82, 10.98],
+            [16.96, -6.85, -54.93, -19.68, 89.47, 12.83],
         ]
 
         # 移动坐标
         self.move_coords = [
-                [37.6, -223.4, 326.3, -173.29, -14.23, -92.43],  # D Sorting area
-                [240.3, -202.2, 317.1, -152.12, -10.15, -95.73],  # C Sorting area
-                [244.5, 193.2, 330.3, -160.54, 17.35, -74.59],  # A Sorting area
-                [26.1, 235.9, 329.0, -175.56, -15.21, 90.98],  # B Sorting area
-            ]
+            [30.3, -214.9, 302.3, -169.77, -8.64, -91.55],  # D Sorting area
+            [240.3, -202.2, 317.1, -152.12, -10.15, -95.73],  # C Sorting area
+            [244.5, 193.2, 330.3, -160.54, 17.35, -74.59],  # A Sorting area
+            [33.2, 205.3, 322.5, -170.22, -13.93, 92.28],  # B Sorting area
+        ]
 
         # choose place to set cube 选择放置立方体的地方
         self.color = 0
@@ -77,27 +77,25 @@ class Object_detect():
         # Get ArUco marker params. 获取 ArUco 标记参数
         self.aruco_params = cv2.aruco.DetectorParameters_create()
 
-    # 开启吸泵 m5
     def pump_on(self):
-        # 让2号位工作
-        self.mc.set_basic_output(2, 0)
-        # 让5号位工作
-        self.mc.set_basic_output(5, 0)
-
-    # 停止吸泵 m5
-    def pump_off(self):
-        # 让2号位停止工作
+        """Start the suction pump"""
+        self.mc.set_basic_output(1, 0)
         self.mc.set_basic_output(2, 1)
-        # 让5号位停止工作
-        self.mc.set_basic_output(5, 1)
-        
-    # 开启夹爪 m5
+
+    def pump_off(self):
+        """stop suction pump m5"""
+        self.mc.set_basic_output(1, 1)
+        self.mc.set_basic_output(2, 0)
+        time.sleep(1)
+        self.mc.set_basic_output(2, 1)
+
     def gripper_on(self):
+        """start gripper"""
         self.mc.set_gripper_state(0, 100)
         time.sleep(1.5)
-    
-    # 关闭夹爪 m5
+
     def gripper_off(self):
+        """stop gripper"""
         self.mc.set_gripper_state(1, 100)
         time.sleep(1.5)
     
@@ -122,10 +120,10 @@ class Object_detect():
         self.gripper_on()
 
         # send coordinates to move mycobot
-        self.mc.send_coords([x, y, 250, -165.54, 2.6, -83.71], 50, 1)  # [238.2, -19.3, 333.2, -165.54, 2.6, -83.71]
+        self.mc.send_coords([x, y, 250, -174.51, 0.86, -85.93], 100, 1)  # [238.2, -19.3, 333.2, -165.54, 2.6, -83.71]
         time.sleep(2.5)
 
-        self.mc.send_coords([x, y, 205, -165.54, 2.6, -83.71], 50, 1)
+        self.mc.send_coords([x, y, 203, -174.51, 0.86, -85.93], 100, 1)
         time.sleep(3)
 
         # close gripper
@@ -145,12 +143,12 @@ class Object_detect():
                             50)  # [18.8, -7.91, -54.49, -23.02, 89.56, -14.76]
         time.sleep(3)
 
-        self.mc.send_coords(self.move_coords[color], 50, 1)
-        time.sleep(3)
+        self.mc.send_coords(self.move_coords[color], 100, 1)
+        time.sleep(6.5)
 
         # open gripper
         self.gripper_on()
-        time.sleep(5)
+        time.sleep(6.5)
 
         # close gripper
         self.gripper_off()

@@ -1,13 +1,13 @@
 # encoding: UTF-8
-import cv2
-import numpy as np
-from pymycobot.mycobot import MyCobot
+import platform
 # import RPi.GPIO as GPIO
 import time
-import os
+
+import cv2
+import numpy as np
 import serial
 import serial.tools.list_ports
-import platform
+from pymycobot.mycobot import MyCobot
 
 # y轴偏移量
 pump_y = -55
@@ -55,18 +55,21 @@ class Detect_marker():
         self.dist_coeffs = np.array(([[3.41360787e-01, -2.52114260e+00, -1.28012469e-03, 6.70503562e-03,
                                        2.57018000e+00]]))
 
-    # 控制吸泵      
+    # 控制吸泵
     def pub_pump(self, flag):
         if flag:
-            self.mc.set_basic_output(2, 0)
-            self.mc.set_basic_output(5, 0)
-        else:
+            """start the suction pump"""
+            self.mc.set_basic_output(1, 0)
             self.mc.set_basic_output(2, 1)
-            self.mc.set_basic_output(5, 1)
+        else:
+            """stop suction pump"""
+            self.mc.set_basic_output(1, 1)
+            self.mc.set_basic_output(2, 0)
+            time.sleep(1)
+            self.mc.set_basic_output(2, 1)
 
     # Grasping motion
     def move(self, x, y, color):
-
         print(color)
 
         angles = [
@@ -77,24 +80,19 @@ class Detect_marker():
 
         coords = [
             [145.0, -65.5, 280.1, 178.99, 7.67, -179.9],  # 初始化点 init point
-            [136.3, 221.4, 244.6, -171.64, 0.48, -11.7],  # A分拣区 A sorting area
-            [-13.6, 218.7, 225.3, -177.09, 0.84, 27.55],  # B分拣区  B sorting area
-            [280.4, -201.0, 249.2, -157.32, -0.83, -110.8],  # C分拣区 C sorting area
-            [154.8, -210.6, 217.4, -175.54, -3.46, -122.78],  # D分拣区 D sorting area
+            [253.8, 236.8, 224.6, -170, 6.87, -77.91],  # A分拣区 A sorting area
+            [35.9, 235.4, 211.8, -169.33, -9.27, 88.3],  # B分拣区  B sorting area
+            [266.5, -219.7, 209.3, -170, -3.64, -94.62],  # C分拣区 C sorting area
+            [32, -228.3, 201.6, -168.07, -7.17, -92.56],  # D分拣区 D sorting area
 
         ]
         print('real_x, real_y:', round(coords[0][0] + x, 2), round(coords[0][1] + y, 2))
         # send coordinates to move mycobot
         self.mc.send_angles(angles[2], 50)
         time.sleep(3)
-
-        # self.mc.send_coords([coords[0][0]+x, coords[0][1]+y, 240, 178.99, 5.38, -179.9], 20, 0)
-        # time.sleep(2)
-        self.mc.send_coords([coords[0][0] + x, coords[0][1] + y, 240, 178.99, -3.78, -62.9], 50, 0)
+        self.mc.send_coords([coords[0][0] + x, coords[0][1] + y, 240, 178.99, -3.78, -62.9], 100, 1)
         time.sleep(2)
-        # self.mc.send_coords([coords[0][0]+x, coords[0][1]+y, 105, 178.99, -3.78, -62.9], 25, 0)
-        # time.sleep(2)
-        self.mc.send_coords([coords[0][0] + x, coords[0][1] + y, 100.5, 178.99, -3.78, -62.9], 50, 0)
+        self.mc.send_coords([coords[0][0] + x, coords[0][1] + y, 100.5, 178.99, -3.78, -62.9], 100, 1)
         time.sleep(2.5)
 
         # open pump
@@ -110,16 +108,16 @@ class Detect_marker():
         time.sleep(0.5)
 
         # print(tmp)
-        self.mc.send_angles([tmp[0], -0.71, -54.49, -23.02, 89.56, tmp[5]],
-                            50)  # [18.8, -7.91, -54.49, -23.02, -0.79, -14.76]
+        self.mc.send_angles([tmp[0], -0.71, -54.49, -23.02, 89.56, tmp[5]], 50)
         time.sleep(3)
         # 抓取后放置区域
-        self.mc.send_coords(coords[color], 50, 0)  # coords[1] 为A分拣区，coords[2] 为B分拣区, coords[3] 为C分拣区，coords[4] 为D分拣区
-        time.sleep(4)
+        self.mc.send_coords(coords[color], 100,
+                            1)  # coords[1] 为A分拣区，coords[2] 为B分拣区, coords[3] 为C分拣区，coords[4] 为D分拣区
+        time.sleep(6.5)
 
         # close pump
         self.pub_pump(False)
-        time.sleep(5)
+        time.sleep(6.5)
 
         self.mc.send_angles(angles[0], 50)
         time.sleep(2)

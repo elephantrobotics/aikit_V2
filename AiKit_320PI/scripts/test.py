@@ -1,8 +1,8 @@
-from pymycobot.mycobot import MyCobot
 import time
-from pymycobot import PI_BAUD, PI_PORT
 
-mc = MyCobot(PI_PORT, PI_BAUD)
+from pymycobot.mycobot import MyCobot
+
+mc = MyCobot('/dev/ttyAMA0', 115200)
 
 coords = [ 
         [135.0, -65.5, 280.1, 178.99, 5.38, -179.9],

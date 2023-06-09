@@ -1,12 +1,12 @@
+import os
+import platform
+import threading
+import time
+
 import cv2
 import numpy as np
-import time
-import threading
-import os
 import serial
 import serial.tools.list_ports
-import platform
-
 from pymycobot.mycobot import MyCobot
 
 IS_CV_4 = cv2.__version__[0] == '4'
@@ -36,10 +36,10 @@ class Object_detect():
 
         # 移动坐标
         self.move_coords = [
-            [154.8, -210.6, 217.4, -175.54, -3.46, -122.78],  # D Sorting area
-            [280.4, -201.0, 249.2, -157.32, -0.83, -110.8],  # C Sorting area
-            [136.3, 221.4, 244.6, -171.64, 0.48, -11.7],  # A Sorting area
-            [-13.6, 218.7, 225.3, -177.09, 0.84, 27.55],  # B Sorting area
+            [32, -228.3, 201.6, -168.07, -7.17, -92.56],  # D Sorting area
+            [266.5, -219.7, 209.3, -170, -3.64, -94.62],  # C Sorting area
+            [253.8, 236.8, 224.6, -170, 6.87, -77.91],  # A Sorting area
+            [35.9, 235.4, 211.8, -169.33, -9.27, 88.3],  # B Sorting area
         ]
 
         # choose place to set cube
@@ -94,19 +94,17 @@ class Object_detect():
         with open(classesFile, 'rt') as f:
             self.classes = f.read().rstrip('\n').split('\n')
 
-    # 开启吸泵 m5
     def pump_on(self):
-        # 让2号位工作
-        self.mc.set_basic_output(2, 0)
-        # 让5号位工作
-        self.mc.set_basic_output(5, 0)
-
-    # 停止吸泵 m5
-    def pump_off(self):
-        # 让2号位停止工作
+        """Start the suction pump"""
+        self.mc.set_basic_output(1, 0)
         self.mc.set_basic_output(2, 1)
-        # 让5号位停止工作
-        self.mc.set_basic_output(5, 1)
+
+    def pump_off(self):
+        """stop suction pump m5"""
+        self.mc.set_basic_output(1, 1)
+        self.mc.set_basic_output(2, 0)
+        time.sleep(1)
+        self.mc.set_basic_output(2, 1)
 
     # Grasping motion
     def move(self, x, y, color):
@@ -117,12 +115,10 @@ class Object_detect():
         time.sleep(3)
 
         # send coordinates to move mycobot
-        self.mc.send_coords([x, y, 230, -173.84, -0.14, -74.37], 50, 1)
+        self.mc.send_coords([x, y, 230, -173.84, -0.14, -74.37], 100, 1)
         time.sleep(2.5)
-
-        self.mc.send_coords([x, y, 100, -173.84, -0.14, -74.37], 50, 1)  #
+        self.mc.send_coords([x, y, 100, -173.84, -0.14, -74.37], 100, 1)  #
         time.sleep(3)
-
         # open pump
         self.pump_on()
         time.sleep(1.5)
@@ -139,13 +135,12 @@ class Object_detect():
         self.mc.send_angles([tmp[0], -0.71, -54.49, -23.02, 89.56, tmp[5]],
                             25)  # [18.8, -7.91, -54.49, -23.02, -0.79, -14.76]
         time.sleep(3)
-
-        self.mc.send_coords(self.move_coords[color], 50, 0)
-        time.sleep(2)
+        self.mc.send_coords(self.move_coords[color], 100, 1)
+        time.sleep(6.5)
 
         # close pump
         self.pump_off()
-        time.sleep(5)
+        time.sleep(6.5)
 
         self.mc.send_angles(self.move_angles[0], 50)
         time.sleep(4.5)

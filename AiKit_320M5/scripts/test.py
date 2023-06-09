@@ -1,14 +1,12 @@
-from pymycobot.mycobot import MyCobot
 import time
-from pymycobot import PI_BAUD, PI_PORT
-import serial
+
 import serial.tools.list_ports
+from pymycobot.mycobot import MyCobot
 
 plist = [
     str(x).split(" - ")[0].strip() for x in serial.tools.list_ports.comports()
 ]
 
-# mc = MyCobot(PI_PORT, PI_BAUD)
 mc = MyCobot(plist[0], 115200)
 
 # 物块上方

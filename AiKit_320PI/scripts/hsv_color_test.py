@@ -1,6 +1,6 @@
-import cv2
 import platform
 
+import cv2
 import numpy as np
 
 if platform.system() == "Windows":
