@@ -93,7 +93,7 @@ class Object_detect():
         print(color)
         print('x,y:', round(x, 2), round(y, 2))
         # send Angle to move mycobot320
-        self.mc.send_angles(self.move_angles[3], 50)
+        self.mc.send_angles(self.move_angles[2], 50)
         time.sleep(3)
         
         # open gripper

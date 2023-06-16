@@ -1,10 +1,10 @@
 # encoding: UTF-8
 import platform
 import time
+import os
 
 import cv2
 import numpy as np
-import serial
 import serial.tools.list_ports
 from pymycobot.mycobot import MyCobot
 
@@ -21,9 +21,11 @@ class Detect_marker():
         self.cache_x = self.cache_y = 0
 
         # get real serial
-        self.plist = [
-            str(x).split(" - ")[0].strip() for x in serial.tools.list_ports.comports()
-        ]
+        # which robot: USB* is m5; ACM* is wio; AMA* is raspi
+        self.robot_m5 = os.popen("ls /dev/ttyUSB*").readline()[:-1]
+        self.robot_wio = os.popen("ls /dev/ttyACM*").readline()[:-1]
+        self.robot_raspi = os.popen("ls /dev/ttyAMA*").readline()[:-1]
+        self.robot_jes = os.popen("ls /dev/ttyTHS1").readline()[:-1]
 
         # Creating a Camera Object
         if platform.system() == "Windows":
@@ -178,7 +180,13 @@ class Detect_marker():
 
     # init mycobot
     def init_mycobot(self):
-        self.mc = MyCobot(self.plist[0], 115200)
+        if "dev" in self.robot_raspi:
+            self.mc = MyCobot(self.robot_raspi, 115200)
+        elif "dev" in self.robot_m5:
+            self.mc = MyCobot(self.robot_m5, 115200)
+        elif "dev" in self.robot_wio:
+            self.mc = MyCobot(self.robot_wio, 115200)
+            
         self.mc.send_angles([0.61, 45.87, -92.37, -32.16, 89.56, 1.66], 50)
         time.sleep(2.5)
         self.gripper_off()
