@@ -119,6 +119,7 @@ class Detect_marker():
         self.mc.send_angles(angles[2], 50)
         time.sleep(3)
         self.mc.send_angle(6, yaw_degrees_opt, 80)
+        time.sleep(3)
         self.gripper_on()
 
         time.sleep(2.5)
@@ -158,10 +159,10 @@ class Detect_marker():
         self.gripper_on()
         time.sleep(6.5)
 
-        self.mc.send_angles(angles[0], 50)
-        time.sleep(2)
         self.gripper_off()
-        # '''
+        time.sleep(1)
+        self.mc.send_angles(angles[0], 50)
+        time.sleep(4.5)
 
     # decide whether grab cube
     def decide_move(self, x, y, color, yaw_degrees):

@@ -152,6 +152,7 @@ class Object_detect():
 
         # close gripper
         self.gripper_off()
+        time.sleep(1)
         self.mc.send_angles(self.move_angles[0], 50)
         time.sleep(4.5)
 

@@ -91,6 +91,7 @@ class Object_detect():
         
         # open gripper
         self.gripper_on()
+        time.sleep(3)
         # send coordinates to move mycobot
         self.mc.send_coords([x, y, 250, -174.51, 0.86, -85.93], 100, 1)
         time.sleep(2.5)
@@ -121,8 +122,9 @@ class Object_detect():
         self.gripper_on()
         time.sleep(6.5)
 
-        self.mc.send_angles(self.move_angles[0], 50)
         self.gripper_off()
+        time.sleep(1)
+        self.mc.send_angles(self.move_angles[0], 50)
         time.sleep(4.5)
 
     # decide whether grab cube
