@@ -118,6 +118,7 @@ class Object_detect():
         
         # open gripper
         self.gripper_on()
+        time.sleep(3)
 
         # send coordinates to move mycobot
         self.mc.send_coords([x, y, 250, -174.51, 0.86, -85.93], 100, 1)  # [238.2, -19.3, 333.2, -165.54, 2.6, -83.71]
