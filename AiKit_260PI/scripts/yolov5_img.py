@@ -150,9 +150,9 @@ class Object_detect():
         time.sleep(3)
 
         # send coordinates to move mypal260 根据不同底板机械臂，调整吸泵高度
-        self.mc.send_coords([x, y, 100, 0], 20, 0)
+        self.mc.send_coords([x, y, 100, 0], 40, 1)
         time.sleep(1.5)
-        self.mc.send_coords([x, y, 63, 0], 20, 0)
+        self.mc.send_coords([x, y, 63, 0], 40, 1)
         time.sleep(1.5)
 
         # open pump
@@ -167,7 +167,7 @@ class Object_detect():
         self.mc.send_angle(3, -18, 20)
         time.sleep(2)
 
-        self.mc.send_coords(self.move_coords[color], 20, 1)
+        self.mc.send_coords(self.move_coords[color], 40, 1)
         time.sleep(3)
 
         # close pump

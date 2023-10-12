@@ -117,13 +117,13 @@ class Object_detect():
         time.sleep(3)
 
         # send coordinates to move mycobot
-        self.mc.send_coords([x, y, 170.6, 179.87, -3.78, -62.75], 25, 1)  # usb :rx,ry,rz -173.3, -5.48, -57.9
+        self.mc.send_coords([x, y, 170.6, 179.87, -3.78, -62.75], 40, 1)  # usb :rx,ry,rz -173.3, -5.48, -57.9
         time.sleep(3)
 
         # self.mc.send_coords([x, y, 150, 179.87, -3.78, -62.75], 25, 0)
         # time.sleep(3)
 
-        self.mc.send_coords([x, y, 65.5, 179.87, -3.78, -62.75], 25, 0)
+        self.mc.send_coords([x, y, 65.5, 179.87, -3.78, -62.75], 40, 1)
         time.sleep(4)
 
         # open pump
@@ -146,7 +146,7 @@ class Object_detect():
                             25)  # [18.8, -7.91, -54.49, -23.02, -0.79, -14.76]
         time.sleep(3)
 
-        self.mc.send_coords(self.move_coords[color], 25, 1)
+        self.mc.send_coords(self.move_coords[color], 40, 1)
 
         time.sleep(3)
 

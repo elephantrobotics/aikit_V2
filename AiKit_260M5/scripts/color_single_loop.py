@@ -107,9 +107,9 @@ class Object_detect():
         time.sleep(3)
 
         # send coordinates to move mypal260
-        self.mc.send_coords([x, y, 160, 0], 20, 0)
+        self.mc.send_coords([x, y, 160, 0], 40, 1)
         time.sleep(1.5)
-        self.mc.send_coords([x, y, 103, 0], 20, 0)
+        self.mc.send_coords([x, y, 103, 0], 40, 1)
         time.sleep(1.5)
 
         # open pump
@@ -120,7 +120,7 @@ class Object_detect():
         self.mc.send_angle(3, -20, 20)
         time.sleep(2)
 
-        self.mc.send_coords(self.move_coords[color], 20, 1)
+        self.mc.send_coords(self.move_coords[color], 40, 1)
         # self.pub_marker(self.move_coords[color][0]/1000.0, self.move_coords[color]
         #                 [1]/1000.0, self.move_coords[color][2]/1000.0)
         time.sleep(3)

@@ -114,11 +114,11 @@ class Detect_marker():
         #self.mc.send_coords([coords[0][0]+x, -(coords[0][1]+y), 150, -178.9, -1.57, -66], 30, 0)
         #time.sleep(3.5)
         #self.mc.send_coords([coords[0][0]+x, -(coords[0][1]+y), 93, -178.9, -1.57, -66], 30, 0)
-        self.mc.send_coords([coords[0][0]+x, coords[0][1]+y, 200, 172.36, 5.36, 125.58], 30, 0)
+        self.mc.send_coords([coords[0][0]+x, coords[0][1]+y, 200, 172.36, 5.36, 125.58], 40, 1)
         time.sleep(3)
-        self.mc.send_coords([coords[0][0]+x, coords[0][1]+y, 150, 172.36, 5.36, 125.58], 30, 0)
+        self.mc.send_coords([coords[0][0]+x, coords[0][1]+y, 150, 172.36, 5.36, 125.58], 40, 1)
         time.sleep(3)
-        self.mc.send_coords([coords[0][0]+x, coords[0][1]+y, 70, 172.36, 5.36, 125.58], 30, 0)
+        self.mc.send_coords([coords[0][0]+x, coords[0][1]+y, 70, 172.36, 5.36, 125.58], 40, 1)
         time.sleep(3)
         
         # open pump
@@ -138,7 +138,7 @@ class Detect_marker():
         self.mc.send_angles([tmp[0], 17.22, -32.51, tmp[3], 97, tmp[5]],30) # [18.8, -7.91, -54.49, -23.02, -0.79, -14.76]
         time.sleep(3)
         # 抓取后放置区域
-        self.mc.send_coords(coords[color], 30, 0) # coords[1] 为A分拣区，coords[2] 为B分拣区, coords[3] 为C分拣区，coords[4] 为D分拣区
+        self.mc.send_coords(coords[color], 40, 1) # coords[1] 为A分拣区，coords[2] 为B分拣区, coords[3] 为C分拣区，coords[4] 为D分拣区
         time.sleep(4)
    
         # close pump

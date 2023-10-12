@@ -130,14 +130,14 @@ class Object_detect():
         time.sleep(3)
 
         # send coordinates to move mycobot
-        self.mc.send_coords([x, y, 150, -176.1, 2.4, -125.1], 30, 0) # usb :rx,ry,rz -173.3, -5.48, -57.9
+        self.mc.send_coords([x, y, 150, -176.1, 2.4, -125.1], 40, 1) # usb :rx,ry,rz -173.3, -5.48, -57.9
         time.sleep(3)
         
         # self.mc.send_coords([x, y, 150, 179.87, -3.78, -62.75], 25, 0)
         # time.sleep(3)
 
         # self.mc.send_coords([x, y, 103, 179.87, -3.78, -62.75], 25, 0)
-        self.mc.send_coords([x, y, 108, -176.1, 2.4, -125.1], 30, 0) # -178.77, -2.69, 40.15     pi
+        self.mc.send_coords([x, y, 108, -176.1, 2.4, -125.1], 40, 1) # -178.77, -2.69, 40.15     pi
         time.sleep(3)
 
         # open pump
@@ -159,7 +159,7 @@ class Object_detect():
         self.mc.send_angles([tmp[0], 17.22, -32.51, tmp[3], 97, tmp[5]],30) # [18.8, -7.91, -54.49, -23.02, -0.79, -14.76]
         time.sleep(3)
 
-        self.mc.send_coords(self.move_coords[color], 30, 0)
+        self.mc.send_coords(self.move_coords[color], 40, 1)
         # self.pub_marker(self.move_coords[color][0]/1000.0, self.move_coords[color]
         #                 [1]/1000.0, self.move_coords[color][2]/1000.0)
         time.sleep(3)
