@@ -1,8 +1,7 @@
 # encoding: UTF-8
 import cv2
 import numpy as np
-from pymycobot.mycobot import MyCobot
-import RPi.GPIO as GPIO
+from pymycobot.myarm import MyArm
 import time
 import os
 
@@ -17,23 +16,12 @@ class Detect_marker():
 
         # set cache of real coord
         self.cache_x = self.cache_y = 0
-
+        self.ma = None
         # which robot: USB* is m5; ACM* is wio; AMA* is raspi
-        self.robot_m5 = os.popen("ls /dev/ttyUSB*").readline()[:-1]
-        self.robot_wio = os.popen("ls /dev/ttyACM*").readline()[:-1]
         self.robot_raspi = os.popen("ls /dev/ttyAMA*").readline()[:-1]
-        self.robot_jes = os.popen("ls /dev/ttyTHS1").readline()[:-1]
         self.raspi = False
 
-        if "dev" in self.robot_m5:
-            self.Pin = [2, 5]
-        elif "dev" in self.robot_wio:
-            # self.Pin = [20, 21]
-            self.Pin = [2, 5]
-
-            # for i in self.move_coords:
-            #     i[2] -= 20
-        elif "dev" in self.robot_raspi or "dev" in self.robot_jes:
+        if "dev" in self.robot_raspi:
             import RPi.GPIO as GPIO
             GPIO.setwarnings(False)
             self.GPIO = GPIO
@@ -48,7 +36,7 @@ class Detect_marker():
 
         # Creating a Camera Object
         cap_num = 0
-        self.cap = cv2.VideoCapture(cap_num)
+        self.cap = cv2.VideoCapture(cap_num, cv2.CAP_V4L)
         self.cap.set(3, 640)
         self.cap.set(4, 480)
 
@@ -69,77 +57,74 @@ class Detect_marker():
         self.dist_coeffs = np.array(([[3.41360787e-01, -2.52114260e+00, -1.28012469e-03, 6.70503562e-03,
                                        2.57018000e+00]]))
 
-    # 控制吸泵
+        # 控制吸泵
+
     def pub_pump(self, flag):
         if flag:
-            GPIO.output(20, 0)
-            GPIO.output(21, 0)
+            self.GPIO.output(20, 0)
+            self.GPIO.output(21, 0)
         else:
-            GPIO.output(20, 1)
-            GPIO.output(21, 1)
+            self.GPIO.output(20, 1)
+            self.GPIO.output(21, 1)
 
     # Grasping motion
     def move(self, x, y, color):
-
         print(color)
 
         angles = [
-            [0.61, 45.87, -92.37, -41.3, 2.02, 9.58],  # init to point
-            [18.8, -7.91, -54.49, -23.02, -0.79, -14.76],
+            [-60, 0, 0, -90, 0, -83, 0],  # init the point
+            [0, 0, 0, -90, 0, -83, 0],  # point to grab
         ]
 
         coords = [
-            [145.0, -65.5, 280.1, 178.99, 7.67, -179.9],  # 初始化点 init point
-            [115.8, 177.3, 210.6, 178.06, -0.92, -6.11],  # A分拣区 A sorting area
-            [-6.9, 173.2, 201.5, 179.93, 0.63, 33.83],  # B分拣区  B sorting area
-            [238.8, -124.1, 204.3, -169.69, -5.52, -96.52],  # C分拣区 C sorting area
-            [132.2, -136.9, 200.8, -178.24, -3.72, -107.17],  # D分拣区 D sorting area
+            [126.1, 0.7, 217.0, 179.64, -1.14, -179.64],  # 初始化点 init point
+            [116.6, 154.6, 177.8, 179.51, 11.59, -127.46], # A Sorting area [52.47, 28.82, 0.52, -73.91, 0.17, -65.65, 0.26]
+            [6.6, 164.3, 179.7, 179.69, 8.43, -92.74],  # B Sorting area [87.27, 16.08, 0.35, -90.0, 0.17, -65.47, 0.26]
+            [209.4, -127.7, 186.1, 179.49, 25.39, 148.18], # C Sorting area [-31.64, 50.62, 0.43, -38.05, 0.0, -65.91, 0.26]
+            [122.4, -143.5, 181.8, 179.92, 6.5, 130.23], # D Sorting area [-49.74, 28.74, 0.26, -71.8, 0.0, -72.94, 0.26]
 
         ]
         print('real_x, real_y:', round(coords[0][0] + x, 2), round(coords[0][1] + y, 2))
         # send coordinates to move mycobot
-        self.mc.send_angles(angles[1], 25)
+        self.ma.send_angles(angles[1], 35)  # [126.1, 0.7, 217.0, 179.64, -1.14, -179.64]
         time.sleep(3)
 
-        # self.mc.send_coords([coords[0][0]+x, coords[0][1]+y, 240, 178.99, 5.38, -179.9], 20, 0)
-        # time.sleep(2)
-        self.mc.send_coords([coords[0][0] + x, coords[0][1] + y, 200, 178.99, -3.78, -62.9], 40, 1)
-        time.sleep(2)
-        # self.mc.send_coords([coords[0][0]+x, coords[0][1]+y, 105, 178.99, -3.78, -62.9], 25, 0)
-        # time.sleep(2)
-        self.mc.send_coords([coords[0][0] + x, coords[0][1] + y, 65.5, 178.99, -3.78, -62.9], 40, 1)
-        time.sleep(3.5)
+        self.ma.send_coords([coords[0][0] + x, coords[0][1] + y, 190.5, -179.72, 6.5, -179.43], 40,
+                            1)  # [164.2, 0.9, 190.5, 179.65, -1.14, 179.94])
+        time.sleep(3)
+        self.ma.send_coords([coords[0][0] + x, coords[0][1] + y, 70, -179.72, 6.5, -179.43], 40,
+                            1)  # [165.0, 0.9, 109.6, 179.69, 0.08, 179.78]
+        time.sleep(3)
 
         # open pump
-        if "dev" in self.robot_raspi:
-            self.pub_pump(True)
+        self.pub_pump(True)
         time.sleep(1.5)
 
         tmp = []
         while True:
             if not tmp:
-                tmp = self.mc.get_angles()
+                tmp = self.ma.get_angles()
             else:
                 break
         time.sleep(0.5)
 
         # print(tmp)
-        self.mc.send_angles([tmp[0], -0.71, -54.49, -23.02, -0.79, tmp[5]],
-                            25)  # [18.8, -7.91, -54.49, -23.02, -0.79, -14.76]
+        self.ma.send_angles([tmp[0], 0, 0, -90, -0.79, -83, tmp[6]],
+                            35)  # [18.8, -7.91, -54.49, -23.02, -0.79, -14.76]
         time.sleep(3)
         # 抓取后放置区域
-        self.mc.send_coords(coords[color], 40, 1)  # coords[1] 为A分拣区，coords[2] 为B分拣区, coords[3] 为C分拣区，coords[4] 为D分拣区
-        time.sleep(4)
+        self.ma.send_coords(coords[color], 40, 1)  # coords[1] 为A分拣区，coords[2] 为B分拣区, coords[3] 为C分拣区，coords[4] 为D分拣区
+        time.sleep(3)
 
         # close pump
-        if "dev" in self.robot_raspi:
-            self.pub_pump(False)
+        self.pub_pump(False)
         time.sleep(5)
 
-        self.mc.send_angles(angles[0], 25)
-        time.sleep(2)
+        self.ma.send_angles(angles[0], 50)
+        time.sleep(3)
 
-    # decide whether grab cube
+        # decide whether grab cube
+
     def decide_move(self, x, y, color):
 
         # print(x,y)
@@ -150,19 +135,15 @@ class Detect_marker():
         else:
             self.cache_x = self.cache_y = 0
             # 调整吸泵吸取位置，y增大,向左移动;y减小,向右移动;x增大,前方移动;x减小,向后方移动
-            self.move(x - 15, y + 145, color)
+            self.move(x + 30, y + 70, color)
 
-    # init mycobot
+        # init mycobot
+
     def init_mycobot(self):
         if "dev" in self.robot_raspi:
-            self.mc = MyCobot(self.robot_raspi, 1000000)
-        elif "dev" in self.robot_m5:
-            self.mc = MyCobot(self.robot_m5, 115200)
-        elif "dev" in self.robot_wio:
-            self.mc = MyCobot(self.robot_wio, 115200)
+            self.ma = MyArm(self.robot_raspi, 115200)
         self.pub_pump(False)
-        self.mc.send_angles([0.61, 45.87, -92.37, -41.3, 2.02, 9.58], 20)
-        # self.mc.send_coords([135.0, -65.5, 280.1, 178.99, 5.38, -179.9], 20, 1)
+        self.ma.send_angles([-60, 0, 0, -90, 0, -83, 0], 20)
         time.sleep(2.5)
 
     def encode_single(self):

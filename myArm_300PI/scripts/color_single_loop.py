@@ -4,7 +4,7 @@ import numpy as np
 import time
 import os, sys
 
-from pymycobot.mycobot import MyCobot
+from pymycobot.myarm import MyArm
 
 IS_CV_4 = cv2.__version__[0] == '4'
 __version__ = "1.0"
@@ -15,41 +15,34 @@ __version__ = "1.0"
 
 class Object_detect():
 
-    def __init__(self, camera_x=155, camera_y=15):
+    def __init__(self, camera_x=165, camera_y=0):
         # inherit the parent class
         super(Object_detect, self).__init__()
-        # declare mycobot280
-        self.mc = None
+        # declare myarm 300
+        self.ma = None
 
         # 移动角度
         self.move_angles = [
-            [0.61, 45.87, -92.37, -41.3, 2.02, 9.58],  # init the point
-            [18.8, -7.91, -54.49, -23.02, -0.79, -14.76],  # point to grab
+            [-60, 0, 0, -90, 0, -83, 0],  # init the point
+            [0, 0, 0, -90, 0, -83, 0],  # point to grab
         ]
 
         # 移动坐标
         self.move_coords = [
-            [132.2, -136.9, 200.8, -178.24, -3.72, -107.17],  # D Sorting area
-            [238.8, -124.1, 204.3, -169.69, -5.52, -96.52],  # C Sorting area
-            [115.8, 177.3, 210.6, 178.06, -0.92, -6.11],  # A Sorting area
-            [-6.9, 173.2, 201.5, 179.93, 0.63, 33.83],  # B Sorting area
+            [122.4, -143.5, 181.8, 179.92, 6.5, 130.23],
+            # D Sorting area [-49.74, 28.74, 0.26, -71.8, 0.0, -72.94, 0.26]
+            [209.4, -127.7, 186.1, 179.49, 25.39, 148.18],
+            # C Sorting area [-31.64, 50.62, 0.43, -38.05, 0.0, -65.91, 0.26]
+            [116.6, 154.6, 177.8, 179.51, 11.59, -127.46],
+            # A Sorting area [52.47, 28.82, 0.52, -73.91, 0.17, -65.65, 0.26]
+            [6.6, 164.3, 179.7, 179.69, 8.43, -92.74],  # B Sorting area [87.27, 16.08, 0.35, -90.0, 0.17, -65.47, 0.26]
         ]
 
         # which robot: USB* is m5; ACM* is wio; AMA* is raspi
-        self.robot_m5 = os.popen("ls /dev/ttyUSB*").readline()[:-1]
-        self.robot_wio = os.popen("ls /dev/ttyACM*").readline()[:-1]
         self.robot_raspi = os.popen("ls /dev/ttyAMA*").readline()[:-1]
-        self.robot_jes = os.popen("ls /dev/ttyTHS1").readline()[:-1]
         self.raspi = False
-        if "dev" in self.robot_m5:
-            self.Pin = [2, 5]
-        elif "dev" in self.robot_wio:
-            # self.Pin = [20, 21]
-            self.Pin = [2, 5]
 
-            # for i in self.move_coords:
-            #     i[2] -= 20
-        elif "dev" in self.robot_raspi or "dev" in self.robot_jes:
+        if "dev" in self.robot_raspi:
             import RPi.GPIO as GPIO
             GPIO.setwarnings(False)
             self.GPIO = GPIO
@@ -73,19 +66,21 @@ class Object_detect():
             "yellow": [np.array([11, 85, 70]), np.array([59, 255, 245])],
             # "yellow": [np.array([22, 93, 0]), np.array([45, 255, 245])],
             "red": [np.array([0, 43, 46]), np.array([8, 255, 255])],
+            "blue": [np.array([85, 43, 46]), np.array([100, 255, 255])],
+            "cyan": [np.array([85, 43, 46]), np.array([100, 255, 255])],
             "green": [np.array([35, 43, 35]), np.array([90, 255, 255])],
-            "blue": [np.array([100, 43, 46]), np.array([124, 255, 255])],
-            "cyan": [np.array([78, 43, 46]), np.array([99, 255, 255])],
+            # "blue": [np.array([100, 43, 46]), np.array([124, 255, 255])],
+            # "cyan": [np.array([85, 43, 46]), np.array([100, 255, 255])],
         }
 
-        # use to calculate coord between cube and mycobot280
-        # 用于计算立方体和 mycobot 之间的坐标
+        # use to calculate coord between cube and myArm 300
+        # 用于计算立方体和 myArm 之间的坐标
         self.sum_x1 = self.sum_x2 = self.sum_y2 = self.sum_y1 = 0
-        # The coordinates of the grab center point relative to the mycobot280
-        # 抓取中心点相对于 mycobot 的坐标
+        # The coordinates of the grab center point relative to the myArm 300
+        # 抓取中心点相对于 myArm 的坐标
         self.camera_x, self.camera_y = camera_x, camera_y
-        # The coordinates of the cube relative to the mycobot280
-        # 立方体相对于 mycobot 的坐标
+        # The coordinates of the cube relative to the myArm 300
+        # 立方体相对于 myArm 的坐标
         self.c_x, self.c_y = 0, 0
         # The ratio of pixels to actual values
         # 像素与实际值的比值
@@ -97,7 +92,8 @@ class Object_detect():
         # Get ArUco marker params. 获取 ArUco 标记参数
         self.aruco_params = cv2.aruco.DetectorParameters_create()
 
-    # pump_control pi
+        # pump_control pi
+
     def gpio_status(self, flag):
         if flag:
             self.GPIO.output(20, 0)
@@ -106,74 +102,54 @@ class Object_detect():
             self.GPIO.output(20, 1)
             self.GPIO.output(21, 1)
 
-    # 开启吸泵 m5
-    def pump_on(self):
-        # 让2号位工作
-        self.mc.set_basic_output(2, 0)
-        # 让5号位工作
-        self.mc.set_basic_output(5, 0)
+        # Grasping motion
 
-    # 停止吸泵 m5
-    def pump_off(self):
-        # 让2号位停止工作
-        self.mc.set_basic_output(2, 1)
-        # 让5号位停止工作
-        self.mc.set_basic_output(5, 1)
-
-    # Grasping motion
     def move(self, x, y, color):
-        # send Angle to move mycobot280
+        # send Angle to move myArm 300
         print(color)
-        self.mc.send_angles(self.move_angles[1], 25)
+        self.ma.send_angles(self.move_angles[1], 35)  # [126.1, 0.7, 217.0, 179.64, -1.14, -179.64]
         time.sleep(3)
 
-        # send coordinates to move mycobot
-        self.mc.send_coords([x, y, 170.6, 179.87, -3.78, -62.75], 40, 1)  # usb :rx,ry,rz -173.3, -5.48, -57.9
+        # send coordinates to move myArm
+        self.ma.send_coords([x, y, 190.5, -179.72, 6.5, -179.43], 40, 1)  # [164.2, 0.9, 190.5, 179.65, -1.14, 179.94]
         time.sleep(3)
 
-        # self.mc.send_coords([x, y, 150, 179.87, -3.78, -62.75], 25, 0)
+        # self.ma.send_coords([x, y, 150, 179.87, -3.78, -62.75], 25, 0)
         # time.sleep(3)
 
-        self.mc.send_coords([x, y, 103, 179.87, -3.78, -62.75], 40, 1)
+        self.ma.send_coords([x, y, 110, -179.72, 6.5, -179.43], 40, 1)  # [165.0, 0.9, 109.6, 179.69, 0.08, 179.78]
         time.sleep(3)
 
         # open pump
-        if "dev" in self.robot_m5 or "dev" in self.robot_wio:
-            self.pump_on()
-        elif "dev" in self.robot_raspi or "dev" in self.robot_jes:
-            self.gpio_status(True)
+        self.gpio_status(True)
         time.sleep(1.5)
 
         tmp = []
         while True:
             if not tmp:
-                tmp = self.mc.get_angles()
+                tmp = self.ma.get_angles()
             else:
                 break
         time.sleep(0.5)
 
         # print(tmp)
-        self.mc.send_angles([tmp[0], -0.71, -54.49, -23.02, -0.79, tmp[5]],
-                            25)  # [18.8, -7.91, -54.49, -23.02, -0.79, -14.76]
+        self.ma.send_angles([tmp[0], 0, 0, -90, -0.79, -83, tmp[6]], 35)  # [0, 0, 0, -90, 0, -83, 0]
         time.sleep(3)
 
-        self.mc.send_coords(self.move_coords[color], 40, 1)
+        self.ma.send_coords(self.move_coords[color], 40, 1)
         # self.pub_marker(self.move_coords[color][0]/1000.0, self.move_coords[color]
         #                 [1]/1000.0, self.move_coords[color][2]/1000.0)
         time.sleep(3)
 
         # close pump
-
-        if "dev" in self.robot_m5 or "dev" in self.robot_wio:
-            self.pump_off()
-        elif "dev" in self.robot_raspi or "dev" in self.robot_jes:
-            self.gpio_status(False)
+        self.gpio_status(False)
         time.sleep(5)
 
-        self.mc.send_angles(self.move_angles[0], 25)
-        time.sleep(4.5)
+        self.ma.send_angles(self.move_angles[0], 50)
+        time.sleep(3)
 
-    # decide whether grab cube 决定是否抓取立方体
+        # decide whether grab cube 决定是否抓取立方体
+
     def decide_move(self, x, y, color):
         print(x, y, self.cache_x, self.cache_y)
         # detect the cube status move or run 检测立方体状态移动或运行
@@ -185,17 +161,13 @@ class Object_detect():
             # 调整吸泵吸取位置，y增大,向左移动;y减小,向右移动;x增大,前方移动;x减小,向后方移动
             self.move(x, y, color)
 
-    # init mycobot280
+        # init myArm 300
+
     def run(self):
-        if "dev" in self.robot_wio:
-            self.mc = MyCobot(self.robot_wio, 115200)
-        elif "dev" in self.robot_m5:
-            self.mc = MyCobot(self.robot_m5, 115200)
-        elif "dev" in self.robot_raspi:
-            self.mc = MyCobot(self.robot_raspi, 1000000)
-        if not self.raspi:
-            self.pub_pump(False, self.Pin)
-        self.mc.send_angles([0.61, 45.87, -92.37, -41.3, 2.02, 9.58], 20)
+        if "dev" in self.robot_raspi:
+            self.ma = MyArm(self.robot_raspi, 115200)
+        self.gpio_status(False)
+        self.ma.send_angles([-60, 0, 0, -90, 0, -83, 0], 40)
         time.sleep(2.5)
 
     # draw aruco
@@ -249,14 +221,14 @@ class Object_detect():
         self.x2 = int(x2)
         self.y2 = int(y2)
 
-    # set parameters to calculate the coords between cube and mycobot280
+    # set parameters to calculate the coords between cube and myarm 300
     # 设置参数以计算立方体和 mycobot 之间的坐标
     def set_params(self, c_x, c_y, ratio):
         self.c_x = c_x
         self.c_y = c_y
         self.ratio = 220.0 / ratio
 
-    # calculate the coords between cube and mycobot280
+    # calculate the coords between cube and myarm 300
     # 计算立方体和 mycobot 之间的坐标
     def get_position(self, x, y):
         return ((y - self.c_y) * self.ratio + self.camera_x), ((x - self.c_x) * self.ratio + self.camera_y)
@@ -337,7 +309,7 @@ class Object_detect():
                     cv2.rectangle(img, (x, y), (x + w, y + h), (153, 153, 0), 2)
                     # calculate the rectangle center 计算矩形中心
                     x, y = (x * 2 + w) / 2, (y * 2 + h) / 2
-                    # calculate the real coordinates of mycobot280 relative to the target
+                    # calculate the real coordinates of myarm 300 relative to the target
                     #  计算 mycobot 相对于目标的真实坐标
 
                     if mycolor == "yellow":
@@ -375,7 +347,7 @@ def color_single():
         cap.open()
     # init a class of Object_detect
     detect = Object_detect()
-    # init mycobot280
+    # init myarm 300
     detect.run()
     # Control the number of crawls 控制抓取次数
     count = 0
@@ -420,7 +392,7 @@ def color_single():
             init_num += 1
             continue
 
-        # calculate params of the coords between cube and mycobot280 计算立方体和 mycobot 之间坐标的参数
+        # calculate params of the coords between cube and myarm 300 计算立方体和 mycobot 之间坐标的参数
         if nparams < 10:
             if detect.get_calculate_params(frame) is None:
                 cv2.imshow("figure", frame)
@@ -437,7 +409,7 @@ def color_single():
                 continue
         elif nparams == 10:
             nparams += 1
-            # calculate and set params of calculating real coord between cube and mycobot280
+            # calculate and set params of calculating real coord between cube and myarm 300
             # 计算和设置计算立方体和mycobot之间真实坐标的参数
             detect.set_params(
                 (detect.sum_x1 + detect.sum_x2) / 20.0,
@@ -455,7 +427,7 @@ def color_single():
                 continue
             else:
                 x, y = detect_result
-                # calculate real coord between cube and mycobot280 计算立方体和 mycobot 之间的真实坐标
+                # calculate real coord between cube and myarm 300 计算立方体和 mycobot 之间的真实坐标
                 real_x, real_y = detect.get_position(x, y)
                 # print('real_x',round(real_x, 3),round(real_y, 3))
                 if num == 20:
@@ -488,7 +460,7 @@ def color_loop():
         cap.open()
     # init a class of Object_detect
     detect = Object_detect()
-    # init mycobot280
+    # init myarm 300
     detect.run()
 
     _init_ = 20
@@ -531,7 +503,7 @@ def color_loop():
             init_num += 1
             continue
 
-        # calculate params of the coords between cube and mycobot280 计算立方体和 mycobot 之间坐标的参数
+        # calculate params of the coords between cube and myarm 300 计算立方体和 mycobot 之间坐标的参数
         if nparams < 10:
             if detect.get_calculate_params(frame) is None:
                 cv2.imshow("figure", frame)
@@ -548,7 +520,7 @@ def color_loop():
                 continue
         elif nparams == 10:
             nparams += 1
-            # calculate and set params of calculating real coord between cube and mycobot280
+            # calculate and set params of calculating real coord between cube and myarm 300
             # 计算和设置计算立方体和mycobot之间真实坐标的参数
             detect.set_params(
                 (detect.sum_x1 + detect.sum_x2) / 20.0,
@@ -566,7 +538,7 @@ def color_loop():
             continue
         else:
             x, y = detect_result
-            # calculate real coord between cube and mycobot280 计算立方体和 mycobot 之间的真实坐标
+            # calculate real coord between cube and myarm 300 计算立方体和 mycobot 之间的真实坐标
             real_x, real_y = detect.get_position(x, y)
             # print('real_x',round(real_x, 3),round(real_y, 3))
             if num == 20:

@@ -16,7 +16,7 @@ class Detect_marker():
 
         # set cache of real coord
         self.cache_x = self.cache_y = 0
-
+        self.ma = None
         # which robot: USB* is m5; ACM* is wio; AMA* is raspi
         self.robot_raspi = os.popen("ls /dev/ttyAMA*").readline()[:-1]
         self.raspi = False
@@ -71,35 +71,30 @@ class Detect_marker():
         print(color)
 
         angles = [
-            [-60, 0, 0, -90, 0, -90, 0],  # init the point
-            [0, 0, 0, -90, 0, -90, 0],  # point to grab
+            [-60, 0, 0, -90, 0, -83, 0],  # init the point
+            [0, 0, 0, -90, 0, -83, 0],  # point to grab
         ]
 
         coords = [
-            [145.0, -65.5, 280.1, 178.99, 7.67, -179.9],  # 初始化点 init point
-            [52.99, -18.36, -1.4, -86.57, -0.17, -55.89, -0.08],  # A分拣区 A sorting area
-            [87.97, -18.28, -1.4, -86.57, -0.35, -71.19, -0.08],  # B分拣区  B sorting area
-            [-27.59, -44.82, -1.75, -48.95, 0.0, -55.89, -0.08],  # C分拣区 C sorting area
-            [-47.9, -17.31, 0.17, -89.91, -0.17, -56.07, 0.0],  # D分拣区 D sorting area
+            [126.1, 0.7, 217.0, 179.64, -1.14, -179.64],  # 初始化点 init point
+            [116.6, 154.6, 177.8, 179.51, 11.59, -127.46],  # A Sorting area [52.47, 28.82, 0.52, -73.91, 0.17, -65.65, 0.26]
+            [6.6, 164.3, 179.7, 179.69, 8.43, -92.74],  # B Sorting area [87.27, 16.08, 0.35, -90.0, 0.17, -65.47, 0.26]
+            [209.4, -127.7, 186.1, 179.49, 25.39, 148.18],  # C Sorting area [-31.64, 50.62, 0.43, -38.05, 0.0, -65.91, 0.26]
+            [122.4, -143.5, 181.8, 179.92, 6.5, 130.23],  # D Sorting area [-49.74, 28.74, 0.26, -71.8, 0.0, -72.94, 0.26]
 
         ]
         print('real_x, real_y:', round(coords[0][0] + x, 2), round(coords[0][1] + y, 2))
-        # send coordinates to move mycobot
-        self.ma.send_angles(angles[1], 25)
+        # send coordinates to move myarm 300
+        self.ma.send_angles(angles[1], 35) # [126.1, 0.7, 217.0, 179.64, -1.14, -179.64]
         time.sleep(3)
 
-        # self.ma.send_coords([coords[0][0]+x, coords[0][1]+y, 240, 178.99, 5.38, -179.9], 20, 0)
-        # time.sleep(2)
-        self.ma.send_coords([coords[0][0] + x, coords[0][1] + y, 200, 178.99, -3.78, -62.9], 40, 1)
-        time.sleep(2)
-        # self.ma.send_coords([coords[0][0]+x, coords[0][1]+y, 105, 178.99, -3.78, -62.9], 25, 0)
-        # time.sleep(2)
-        self.ma.send_coords([coords[0][0] + x, coords[0][1] + y, 65.5, 178.99, -3.78, -62.9], 40, 1)
-        time.sleep(3.5)
+        self.ma.send_coords([coords[0][0] + x, coords[0][1] + y, 190.5, -179.72, 6.5, -179.43], 40, 1)  # [164.2, 0.9, 190.5, 179.65, -1.14, 179.94])
+        time.sleep(3)
+        self.ma.send_coords([coords[0][0] + x, coords[0][1] + y, 70, -179.72, 6.5, -179.43], 40, 1)  # [165.0, 0.9, 109.6, 179.69, 0.08, 179.78]
+        time.sleep(3)
 
         # open pump
-        if "dev" in self.robot_raspi:
-            self.pub_pump(True)
+        self.pub_pump(True)
         time.sleep(1.5)
 
         tmp = []
@@ -111,20 +106,19 @@ class Detect_marker():
         time.sleep(0.5)
 
         # print(tmp)
-        self.ma.send_angles([tmp[0], 0, 0, -90, -0.79, -90, tmp[6]],
-                            50)  # [18.8, -7.91, -54.49, -23.02, -0.79, -14.76]
+        self.ma.send_angles([tmp[0], 0, 0, -90, -0.79, -83, tmp[6]],
+                            35)  # [18.8, -7.91, -54.49, -23.02, -0.79, -14.76]
         time.sleep(3)
         # 抓取后放置区域
         self.ma.send_coords(coords[color], 40, 1)  # coords[1] 为A分拣区，coords[2] 为B分拣区, coords[3] 为C分拣区，coords[4] 为D分拣区
-        time.sleep(4)
+        time.sleep(3)
 
         # close pump
-        if "dev" in self.robot_raspi:
-            self.pub_pump(False)
+        self.pub_pump(False)
         time.sleep(5)
 
         self.ma.send_angles(angles[0], 50)
-        time.sleep(2)
+        time.sleep(3)
 
     # decide whether grab cube
     def decide_move(self, x, y, color):
@@ -137,15 +131,14 @@ class Detect_marker():
         else:
             self.cache_x = self.cache_y = 0
             # 调整吸泵吸取位置，y增大,向左移动;y减小,向右移动;x增大,前方移动;x减小,向后方移动
-            self.move(x - 15, y + 145, color)
+            self.move(x + 30, y + 70, color)
 
-    # init mycobot
+    # init myarm 300
     def init_mycobot(self):
         if "dev" in self.robot_raspi:
-            self.ma = MyArm(self.robot_raspi, 1000000)
+            self.ma = MyArm(self.robot_raspi, 115200)
         self.pub_pump(False)
-        self.ma.send_angles([-60, 0, 0, -90, 0, -90, 0], 20)
-        # self.ma.send_coords([135.0, -65.5, 280.1, 178.99, 5.38, -179.9], 20, 1)
+        self.ma.send_angles([-60, 0, 0, -90, 0, -83, 0], 20)
         time.sleep(2.5)
 
     def run(self):

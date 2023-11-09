@@ -15,7 +15,7 @@ __version__ = "1.0"
 
 class Object_detect():
 
-    def __init__(self, camera_x=162, camera_y=15):
+    def __init__(self, camera_x=160, camera_y=0):
         # inherit the parent class
         super(Object_detect, self).__init__()
         # declare myArm 300
@@ -23,16 +23,16 @@ class Object_detect():
 
         # 移动角度
         self.move_angles = [
-            [-60, 0, 0, -90, 0, -90, 0],  # init the point
-            [0, 0, 0, -90, 0, -90, 0],  # point to grab
+            [-60, 0, 0, -90, 0, -83, 0],  # init the point
+            [0, 0, 0, -90, 0, -83, 0],  # point to grab
         ]
 
         # 移动坐标
         self.move_coords = [
-            [-47.9, -17.31, 0.17, -89.91, -0.17, -56.07, 0.0],  # D Sorting area
-            [-27.59, -44.82, -1.75, -48.95, 0.0, -55.89, -0.08],  # C Sorting area
-            [52.99, -18.36, -1.4, -86.57, -0.17, -55.89, -0.08],  # A Sorting area
-            [87.97, -18.28, -1.4, -86.57, -0.35, -71.19, -0.08],  # B Sorting area
+            [122.4, -143.5, 181.8, 179.92, 6.5, 130.23],  # D Sorting area [-49.74, 28.74, 0.26, -71.8, 0.0, -72.94, 0.26]
+            [209.4, -127.7, 186.1, 179.49, 25.39, 148.18],  # C Sorting area [-31.64, 50.62, 0.43, -38.05, 0.0, -65.91, 0.26]
+            [116.6, 154.6, 177.8, 179.51, 11.59, -127.46],  # A Sorting area [52.47, 28.82, 0.52, -73.91, 0.17, -65.65, 0.26]
+            [6.6, 164.3, 179.7, 179.69, 8.43, -92.74],  # B Sorting area [87.27, 16.08, 0.35, -90.0, 0.17, -65.47, 0.26]
         ]
 
         # which robot: USB* is m5; ACM* is wio; AMA* is raspi
@@ -75,8 +75,7 @@ class Object_detect():
         # 初始化背景减法器
         self.mog = cv2.bgsegm.createBackgroundSubtractorMOG()
 
-        # pump_control pi
-
+    # pump_control pi
     def gpio_status(self, flag):
         if flag:
             self.GPIO.output(20, 0)
@@ -89,24 +88,18 @@ class Object_detect():
     def move(self, x, y, color):
         # send Angle to move myArm 300
         print(color)
-        self.ma.send_angles(self.move_angles[1], 25)
+        self.ma.send_angles(self.move_angles[1], 35)  # [126.1, 0.7, 217.0, 179.64, -1.14, -179.64]
         time.sleep(3)
 
-        # send coordinates to move myarm
-        self.ma.send_coords([x, y, 170.6, 179.87, -3.78, -62.75], 40, 1)  # usb :rx,ry,rz -173.3, -5.48, -57.9
+        # send coordinates to move myArm
+        self.ma.send_coords([x, y, 190.5, -179.72, 6.5, -179.43], 40, 1)  # [164.2, 0.9, 190.5, 179.65, -1.14, 179.94]
         time.sleep(3)
 
         # self.ma.send_coords([x, y, 150, 179.87, -3.78, -62.75], 25, 0)
         # time.sleep(3)
 
-        self.ma.send_coords([x, y, 65.5, 179.87, -3.78, -62.75], 40, 1)
-        time.sleep(4)
-
-        # mc.send_angles([0, -22, 0, -70, 0, -90, 0], 50)
-        # time.sleep(3)
-        #
-        # mc.send_angles([0, -40, 0, -90, 0, -52, 0], 50)
-        # time.sleep(3)
+        self.ma.send_coords([x, y, 70, -179.72, 6.5, -179.43], 40, 1)  # [165.0, 0.9, 109.6, 179.69, 0.08, 179.78]
+        time.sleep(3)
 
         # open pump
         self.gpio_status(True)
@@ -121,7 +114,7 @@ class Object_detect():
         time.sleep(0.5)
 
         # print(tmp)
-        self.ma.send_angles([tmp[0], 0, 0, -90, -0.79, -90, tmp[6]], 50)  # [18.8, -7.91, -54.49, -23.02, -0.79, -14.76]
+        self.ma.send_angles([tmp[0], 0, 0, -90, -0.79, -83, tmp[6]], 35)  # [0, 0, 0, -90, 0, -83, 0]
         time.sleep(3)
 
         self.ma.send_coords(self.move_coords[color], 40, 1)
@@ -133,7 +126,7 @@ class Object_detect():
         time.sleep(5)
 
         self.ma.send_angles(self.move_angles[0], 50)
-        time.sleep(4)
+        time.sleep(3)
 
     # decide whether grab cube
     def decide_move(self, x, y, color):
@@ -150,9 +143,9 @@ class Object_detect():
     # init myArm 300
     def run(self):
         if "dev" in self.robot_raspi:
-            self.ma = MyArm(self.robot_raspi, 1000000)
+            self.ma = MyArm(self.robot_raspi, 115200)
         self.gpio_status(False)
-        self.ma.send_angles([-60, 0, 0, -90, 0, -90, 0], 40)
+        self.ma.send_angles([-60, 0, 0, -90, 0, -83, 0], 40)
         time.sleep(2.5)
 
     # draw aruco

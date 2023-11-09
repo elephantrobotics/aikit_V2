@@ -101,18 +101,22 @@ def cut_photo():
         if kw == 1:
             cv2.imwrite(path + '/res/A/goal{}.jpeg'.format(str(file_len_red + 1)), crop)
             print('Saved')
+            exit(0)
         # 选择B区文件夹
         elif kw == 2:
             cv2.imwrite(path + '/res/B/goal{}.jpeg'.format(str(file_len_gray + 1)), crop)
             print('Saved')
+            exit(0)
         # 选择C区文件夹
         elif kw == 3:
             cv2.imwrite(path + '/res/C/goal{}.jpeg'.format(str(file_len_green + 1)), crop)
             print('Saved')
+            exit(0)
         # 选择A区文件夹
         elif kw == 4:
             cv2.imwrite(path + '/res/D/goal{}.jpeg'.format(str(file_len_blue + 1)), crop)
             print('Saved')
+            exit(0)
 
     # 退出
     cv2.waitKey(0)
