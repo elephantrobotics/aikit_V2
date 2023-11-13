@@ -304,7 +304,6 @@ class Object_detect():
                     x, y = (x * 2 + w) / 2, (y * 2 + h) / 2
                     # calculate the real coordinates of myArm 300 relative to the target
                     #  计算 myArm 相对于目标的真实坐标
-                    print('color:', mycolor)
                     if mycolor == "yellow":
 
                         self.color = 3
