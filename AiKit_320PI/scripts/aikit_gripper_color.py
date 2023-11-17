@@ -176,8 +176,11 @@ class Object_detect():
             self.mc = MyCobot(self.robot_m5, 115200)
         elif "dev" in self.robot_wio:
             self.mc = MyCobot(self.robot_wio, 115200)
-        self.mc.send_angles([0.61, 45.87, -92.37, -32.16, 89.56, 1.66], 20)
+        self.mc.send_angles([0.61, 45.87, -92.37, -32.16, 89.56, 1.66], 40)
         time.sleep(2.5)
+        # 设置夹爪为透传模式
+        self.mc.set_gripper_mode(0)
+        time.sleep(0.5)
         self.gripper_off()
 
 
