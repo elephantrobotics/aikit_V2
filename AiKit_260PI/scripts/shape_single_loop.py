@@ -174,8 +174,7 @@ class Object_detect():
             self.mc = MyPalletizer(self.robot_m5, 115200) 
         elif "dev" in self.robot_raspi:
             self.mc = MyPalletizer(self.robot_raspi, 1000000)
-        # if not self.raspi:
-        #     self.pub_pump(False, self.Pin)
+        self.gpio_status(False)
         self.mc.send_angles([-29.0, 5.88, -4.92, -76.28], 20)
         time.sleep(3)
 

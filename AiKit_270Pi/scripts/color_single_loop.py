@@ -195,8 +195,7 @@ class Object_detect():
             self.mc = MyCobot(self.robot_m5, 115200) 
         elif "dev" in self.robot_raspi:
             self.mc = MyCobot(self.robot_raspi, 1000000)
-        if not self.raspi:
-            self.pub_pump(False, self.Pin)
+        self.gpio_status(False)
         self.mc.send_angles([-33.31, 2.02, -10.72, -0.08, 95, -54.84], 50)
         time.sleep(3)
 
