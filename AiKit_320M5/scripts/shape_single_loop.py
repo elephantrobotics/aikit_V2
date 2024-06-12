@@ -338,6 +338,8 @@ def shape_single():
     while cv2.waitKey(1) < 0:
         # read camera
         _, frame = cap.read()
+        # 旋转180度
+        frame = cv2.rotate(frame, cv2.ROTATE_180)
         # deal img
         frame = detect.transform_frame(frame)
         if _init_ > 0:

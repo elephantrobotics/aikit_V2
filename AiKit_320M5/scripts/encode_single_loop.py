@@ -153,6 +153,8 @@ class Detect_marker():
         num = sum_x = sum_y = 0
         while cv2.waitKey(1) < 0:
             success, img = self.cap.read()
+            # 旋转180度
+            img = cv2.rotate(img, cv2.ROTATE_180)
             if not success:
                 print("It seems that the image cannot be acquired correctly.")
                 break

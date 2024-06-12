@@ -394,6 +394,8 @@ def process_display_frame(connection):
 
     while cv2.waitKey(1) < 0:
         _, frame = cap.read()
+        # 旋转180度
+        frame = cv2.rotate(frame, cv2.ROTATE_180)
         frame = process_transform_frame(frame, x1, y1, x2, y2)
         if connection.poll():
             request = connection.recv()

@@ -40,6 +40,8 @@ def take_photo():
     while True:
         # 读入每一帧
         ret, frame = cap.read()
+        # 旋转180度
+        frame = cv2.rotate(frame, cv2.ROTATE_180)
 
         cv2.imshow("capture", frame)
 
