@@ -1,8 +1,9 @@
+import traceback
 from multiprocessing import Process, Pipe
 import cv2
 import numpy as np
 import time
-import os,sys
+import os, sys
 
 from pymycobot.mycobot import MyCobot
 
@@ -12,7 +13,7 @@ __version__ = "1.0"  # Adaptive seeed
 
 class Object_detect():
 
-    def __init__(self, camera_x = 160, camera_y = 10):
+    def __init__(self, camera_x=160, camera_y=10):
         # inherit the parent class
         super(Object_detect, self).__init__()
 
@@ -27,11 +28,11 @@ class Object_detect():
         # 移动坐标
         self.move_coords = [
             [132.2, -136.9, 200.8, -178.24, -3.72, -107.17],  # D Sorting area
-            [238.8, -124.1, 204.3, -169.69, -5.52, -96.52], # C Sorting area
-            [115.8, 177.3, 210.6, 178.06, -0.92, -6.11], # A Sorting area
-            [-6.9, 173.2, 201.5, 179.93, 0.63, 33.83], # B Sorting area
+            [238.8, -124.1, 204.3, -169.69, -5.52, -96.52],  # C Sorting area
+            [115.8, 177.3, 210.6, 178.06, -0.92, -6.11],  # A Sorting area
+            [-6.9, 173.2, 201.5, 179.93, 0.63, 33.83],  # B Sorting area
         ]
-        
+
         # which robot: USB* is m5; ACM* is wio; AMA* is raspi
         self.robot_m5 = os.popen("ls /dev/ttyUSB*").readline()[:-1]
         self.robot_wio = os.popen("ls /dev/ttyACM*").readline()[:-1]
@@ -58,7 +59,7 @@ class Object_detect():
             self.raspi = True
         if self.raspi:
             self.gpio_status(False)
-   
+
         # choose place to set cube
         self.color = 0
         # parameters to calculate camera clipping parameters
@@ -78,7 +79,7 @@ class Object_detect():
         self.aruco_dict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_6X6_250)
         # Get ArUco marker params.
         self.aruco_params = cv2.aruco.DetectorParameters_create()
-        
+
     # pump_control pi
     def gpio_status(self, flag):
         if flag:
@@ -102,23 +103,40 @@ class Object_detect():
         # 让5号位停止工作
         self.mc.set_basic_output(5, 1)
 
+    def check_position(self, data, ids):
+        """
+        循环检测是否到位某个位置
+        :param data: 角度或者坐标
+        :param ids: 角度-0，坐标-1
+        :return:
+        """
+        try:
+            while True:
+                res = self.mc.is_in_position(data, ids)
+                # print('res', res)
+                if res == 1:
+                    time.sleep(0.1)
+                    break
+                time.sleep(0.1)
+        except Exception as e:
+            e = traceback.format_exc()
+            print(e)
+
     # Grasping motion
     def move(self, x, y, color):
         # send Angle to move mypal260
         self.mc.send_angles(self.move_angles[1], 25)
-        time.sleep(3)
+        self.check_position(self.move_angles[1], 0)
 
         # send coordinates to move mycobot
-        self.mc.send_coords([x, y,  170.6, 179.87, -3.78, -62.75], 40, 1) # usb :rx,ry,rz -173.3, -5.48, -57.9
-        time.sleep(3)
-        
+        self.mc.send_coords([x, y, 170.6, 179.87, -3.78, -62.75], 40, 1)  # usb :rx,ry,rz -173.3, -5.48, -57.9
+
         # self.mc.send_coords([x, y, 150, 179.87, -3.78, -62.75], 25, 0)
         # time.sleep(3)
 
         self.mc.send_coords([x, y, 65, 179.87, -3.78, -62.75], 40, 1)
-        # self.mc.send_coords([x, y, 103, 179.87, -3.78, -62.75], 25, 0)
-        
-        time.sleep(4)
+        data = [x, y, 65, 179.87, -3.78, -62.75]
+        self.check_position(data, 1)
 
         # open pump
         if "dev" in self.robot_m5 or "dev" in self.robot_wio:
@@ -129,30 +147,29 @@ class Object_detect():
 
         tmp = []
         while True:
-            if not tmp: 
-                tmp = self.mc.get_angles()    
+            if not tmp:
+                tmp = self.mc.get_angles()
             else:
                 break
         time.sleep(0.5)
 
-         # print(tmp)
-        self.mc.send_angles([tmp[0], -0.71, -54.49, -23.02, -0.79, tmp[5]],25) # [18.8, -7.91, -54.49, -23.02, -0.79, -14.76]
-        time.sleep(3)
-
-
+        # print(tmp)
+        self.mc.send_angles([tmp[0], -0.71, -54.49, -23.02, -0.79, tmp[5]],
+                            25)  # [18.8, -7.91, -54.49, -23.02, -0.79, -14.76]
+        self.check_position([tmp[0], -0.71, -54.49, -23.02, -0.79, tmp[5]], 0)
 
         self.mc.send_coords(self.move_coords[color], 40, 1)
-        time.sleep(4)
+        self.check_position(self.move_coords[color], 1)
 
         # close pump
         if "dev" in self.robot_m5 or "dev" in self.robot_wio:
             self.pump_off()
         elif "dev" in self.robot_raspi or "dev" in self.robot_jes:
             self.gpio_status(False)
-        time.sleep(5)
+        time.sleep(0.5)
 
         self.mc.send_angles(self.move_angles[0], 25)
-        time.sleep(4.5)
+        self.check_position(self.move_angles[0], 0)
 
     # decide whether grab cube
     def decide_move(self, x, y, color):
@@ -164,23 +181,21 @@ class Object_detect():
         else:
             self.cache_x = self.cache_y = 0
             # 调整吸泵吸取位置，y增大,向左移动;y减小,向右移动;x增大,前方移动;x减小,向后方移动
-       
+
             self.move(x, y, color)
-      
 
     # init mycobot
     def run(self):
-    
-        if "dev" in self.robot_wio :
-            self.mc = MyCobot(self.robot_wio, 115200) 
+
+        if "dev" in self.robot_wio:
+            self.mc = MyCobot(self.robot_wio, 115200)
         elif "dev" in self.robot_m5:
-            self.mc = MyCobot(self.robot_m5, 115200) 
+            self.mc = MyCobot(self.robot_m5, 115200)
         elif "dev" in self.robot_raspi:
             self.mc = MyCobot(self.robot_raspi, 1000000)
         self.gpio_status(False)
         self.mc.send_angles([0.61, 45.87, -92.37, -41.3, 2.02, 9.58], 20)
-        time.sleep(2.5)
-
+        self.check_position([0.61, 45.87, -92.37, -41.3, 2.02, 9.58], 0)
 
     # draw aruco
     def draw_marker(self, img, x, y):
@@ -226,14 +241,14 @@ class Object_detect():
                 x1, y1 = int(
                     (point_11[0] + point_21[0] + point_31[0] + point_41[0]) /
                     4.0), int(
-                        (point_11[1] + point_21[1] + point_31[1] + point_41[1])
-                        / 4.0)
+                    (point_11[1] + point_21[1] + point_31[1] + point_41[1])
+                    / 4.0)
                 point_1, point_2, point_3, point_4 = corners[1][0]
                 x2, y2 = int(
                     (point_1[0] + point_2[0] + point_3[0] + point_4[0]) /
                     4.0), int(
-                        (point_1[1] + point_2[1] + point_3[1] + point_4[1]) /
-                        4.0)
+                    (point_1[1] + point_2[1] + point_3[1] + point_4[1]) /
+                    4.0)
                 return x1, x2, y1, y2
         return None
 
@@ -273,7 +288,7 @@ class Object_detect():
         if self.x1 != self.x2:
             # the cutting ratio here is adjusted according to the actual situation
             frame = frame[int(self.y2 * 0.2):int(self.y1 * 1.15),
-                          int(self.x1 * 0.7):int(self.x2 * 1.15)]
+                    int(self.x1 * 0.7):int(self.x2 * 1.15)]
         return frame
 
     # according the class_id to get object name
@@ -321,7 +336,6 @@ class Object_detect():
 
                 # When there are enough robust matching point pairs 当有足够的健壮匹配点对（至少个MIN_MATCH_COUNT）时
                 if len(good) > MIN_MATCH_COUNT:
-
                     # extract corresponding point pairs from matching 从匹配中提取出对应点对
                     # query index of small objects, training index of scenarios 小对象的查询索引，场景的训练索引
                     src_pts = np.float32([kp[i][m.queryIdx].pt
@@ -339,7 +353,7 @@ class Object_detect():
                                       [w - 1, 0]]).reshape(-1, 1, 2)
                     dst = cv2.perspectiveTransform(pts, M)
                     coord = (dst[0][0] + dst[1][0] + dst[2][0] +
-                              dst[3][0]) / 4.0
+                             dst[3][0]) / 4.0
                     connection.send((DRAW_COORDS, coord))
                     # cv2.putText(img, "{}".format(coord), (50, 60),
                     #         fontFace=None, fontScale=1,
@@ -362,6 +376,7 @@ class Object_detect():
         else:
             return None
 
+
 # The path to save the image folder
 def parse_folder(folder):
     restore = []
@@ -373,7 +388,7 @@ def parse_folder(folder):
     #     path = path1
     # elif os.path.exists(path2):
     #     path = path2
-    
+
     # path1 = os.path.split(os.path.abspath(os.path.dirname(__file__)))
     path1 = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -384,6 +399,7 @@ def parse_folder(folder):
             restore.append(cv2.imread(path + '/{}'.format(l)))
     # print(restore)
     return restore
+
 
 def compute_keypoints_and_descriptors(sift, images_lists):
     kp_list = []
@@ -400,6 +416,7 @@ def compute_keypoints_and_descriptors(sift, images_lists):
 
     return kp_list, desc_list
 
+
 GET_FRAME = 1
 STOP_PROCESSING = 2
 DRAW_COORDS = 3
@@ -407,24 +424,27 @@ DRAW_RECT = 4
 CLEAR_DRAW = 5
 CROP_FRAME = 6
 
+
 def get_frame(connection):
     connection.send(GET_FRAME)
     frame = connection.recv()
     return frame
+
 
 def process_transform_frame(frame, x1, y1, x2, y2):
     # enlarge the image by 1.5 times
     fx = 1.5
     fy = 1.5
     frame = cv2.resize(frame, (0, 0),
-                        fx=fx,
-                        fy=fy,
-                        interpolation=cv2.INTER_CUBIC)
+                       fx=fx,
+                       fy=fy,
+                       interpolation=cv2.INTER_CUBIC)
     if x1 != x2:
         # the cutting ratio here is adjusted according to the actual situation
-       frame = frame[int(y2 * 0.7):int(y1 * 1.15),
-                       int(x1 * 0.7):int(x2 * 1.15)]
+        frame = frame[int(y2 * 0.7):int(y1 * 1.15),
+                int(x1 * 0.7):int(x2 * 1.15)]
     return frame
+
 
 def process_display_frame(connection):
     cap_num = 0
@@ -461,7 +481,7 @@ def process_display_frame(connection):
 
         if not coord is None:
             cv2.putText(frame, "{}".format(coord), (50, 60), fontFace=None,
-                    fontScale=1, color=(0, 255, 0), lineType=1)
+                        fontScale=1, color=(0, 255, 0), lineType=1)
         if not dst is None:
             frame = cv2.polylines(frame, [np.int32(dst)], True, 244, 3, cv2.LINE_AA)
         cv2.imshow("figure", frame)
@@ -596,7 +616,7 @@ def img_single():
 
 def img_loop():
     parent_conn, child_conn = Pipe()
-    child = Process(target = process_display_frame, args=(child_conn,))
+    child = Process(target=process_display_frame, args=(child_conn,))
     child.start()
 
     res_queue = [[], [], [], []]
@@ -629,7 +649,7 @@ def img_loop():
         # read camera
         frame = get_frame(parent_conn)
         # deal img
-        #frame = detect.transform_frame(frame)
+        # frame = detect.transform_frame(frame)
 
         # calculate the parameters of camera clipping
         if init_num < 20:
@@ -654,10 +674,10 @@ def img_loop():
                 (detect.sum_y2) / 20.0,
             )
             parent_conn.send((CROP_FRAME,
-                (detect.sum_x1) / 20.0,
-                (detect.sum_y1) / 20.0,
-                (detect.sum_x2) / 20.0,
-                (detect.sum_y2) / 20.0))
+                              (detect.sum_x1) / 20.0,
+                              (detect.sum_y1) / 20.0,
+                              (detect.sum_x2) / 20.0,
+                              (detect.sum_y2) / 20.0))
             detect.sum_x1 = detect.sum_x2 = detect.sum_y1 = detect.sum_y2 = 0
             init_num += 1
             continue
@@ -676,7 +696,7 @@ def img_loop():
                 detect.sum_y1 += y1
                 detect.sum_y2 += y2
                 nparams += 1
-                print ("ok")
+                print("ok")
                 continue
         elif nparams == 10:
             nparams += 1
@@ -713,7 +733,7 @@ def img_loop():
             sys.exit()
 
     child.join()
-    
+
 
 if __name__ == "__main__":
     # 提醒用户操作字典
