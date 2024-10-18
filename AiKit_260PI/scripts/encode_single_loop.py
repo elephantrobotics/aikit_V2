@@ -1,6 +1,6 @@
 import cv2 as cv
 import numpy as np
-from pymycobot.mypalletizer import MyPalletizer
+from pymycobot.mypalletizer260 import MyPalletizer260
 import time
 import platform
 import os
@@ -151,11 +151,11 @@ class Detect_marker():
     # init mycobot
     def init_mycobot(self):
         if "dev" in self.robot_raspi:
-            self.mc = MyPalletizer(self.robot_raspi, 1000000)
+            self.mc = MyPalletizer260(self.robot_raspi, 1000000)
         elif "dev" in self.robot_m5:
-            self.mc = MyPalletizer(self.robot_m5, 115200)
+            self.mc = MyPalletizer260(self.robot_m5, 115200)
         elif "dev" in self.robot_wio:
-            self.mc = MyPalletizer(self.robot_wio, 115200)
+            self.mc = MyPalletizer260(self.robot_wio, 115200)
         self.pub_pump(False)
         self.mc.send_angles([-29.0, 5.88, -4.92, -76.28], 30)
         time.sleep(2)

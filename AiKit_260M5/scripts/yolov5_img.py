@@ -10,7 +10,7 @@ import serial
 import serial.tools.list_ports 
 import platform
 
-from pymycobot.mypalletizer import MyPalletizer
+from pymycobot.mypalletizer260 import MyPalletizer260
 
 IS_CV_4 = cv2.__version__[0] == '4'
 __version__ = "1.0"  # Adaptive seeed
@@ -166,7 +166,7 @@ class Object_detect():
 
     # init mycobot
     def run(self):
-        self.mc = MyPalletizer(self.plist[0], 115200) 
+        self.mc = MyPalletizer260(self.plist[0], 115200)
         self.mc.send_angles([-29.0, 5.88, -4.92, -76.28], 20)
         time.sleep(3)
 

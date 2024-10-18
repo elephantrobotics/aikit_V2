@@ -6,7 +6,7 @@ import cv2
 import numpy as np
 import serial
 import serial.tools.list_ports
-from pymycobot.mycobot import MyCobot
+from pymycobot.mycobot320 import MyCobot320
 
 # y轴偏移量
 pump_y = -55
@@ -179,7 +179,7 @@ class Detect_marker():
 
     # init mycobot
     def init_mycobot(self):
-        self.mc = MyCobot(self.plist[0], 115200)
+        self.mc = MyCobot320(self.plist[0], 115200)
         self.mc.send_angles([0.61, 45.87, -92.37, -32.16, 89.56, 1.66], 50)
         time.sleep(2.5)
         # 设置夹爪为透传模式

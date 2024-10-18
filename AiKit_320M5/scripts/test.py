@@ -1,14 +1,14 @@
 import time
 
 import serial.tools.list_ports
-from pymycobot.mycobot import MyCobot
+from pymycobot.mycobot320 import MyCobot320
 
 plist = [
     str(x).split(" - ")[0].strip() for x in serial.tools.list_ports.comports()
 ]
 
 print(plist)
-mc = MyCobot(plist[0], 115200)
+mc = MyCobot320(plist[0], 115200)
 print(mc.get_angles())
 
 mc.set_gripper_mode(0)
