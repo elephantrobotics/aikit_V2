@@ -8,7 +8,7 @@
 - 机械臂驱动库
 
 ```bash
-pip install pymycobot
+pip install pymycobot --upgrade
 ```
 
 - python opencv支持库

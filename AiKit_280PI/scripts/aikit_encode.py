@@ -3,7 +3,7 @@ import traceback
 
 import cv2
 import numpy as np
-from pymycobot.mycobot import MyCobot
+from pymycobot.mycobot280 import MyCobot280
 import RPi.GPIO as GPIO
 import time
 import os
@@ -176,11 +176,11 @@ class Detect_marker():
     # init mycobot
     def init_mycobot(self):
         if "dev" in self.robot_raspi:
-            self.mc = MyCobot(self.robot_raspi, 1000000)
+            self.mc = MyCobot280(self.robot_raspi, 1000000)
         elif "dev" in self.robot_m5:
-            self.mc = MyCobot(self.robot_m5, 115200)
+            self.mc = MyCobot280(self.robot_m5, 115200)
         elif "dev" in self.robot_wio:
-            self.mc = MyCobot(self.robot_wio, 115200)
+            self.mc = MyCobot280(self.robot_wio, 115200)
         self.pub_pump(False)
         self.mc.send_angles([0.61, 45.87, -92.37, -41.3, 2.02, 9.58], 20)
         self.check_position([0.61, 45.87, -92.37, -41.3, 2.02, 9.58], 0)

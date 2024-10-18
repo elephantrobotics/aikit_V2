@@ -1,4 +1,4 @@
-from pymycobot.mycobot import MyCobot
+from pymycobot.mycobot280 import MyCobot280
 import time
 from pymycobot import PI_BAUD, PI_PORT
 import serial
@@ -8,8 +8,7 @@ plist = [
     str(x).split(" - ")[0].strip() for x in serial.tools.list_ports.comports()
 ]
 
-# mc = MyCobot(PI_PORT, PI_BAUD)
-mc = MyCobot(plist[0], 115200)
+mc = MyCobot280(plist[0], 115200)
 
 coords = [ 
         [135.0, -65.5, 280.1, 178.99, 5.38, -179.9],

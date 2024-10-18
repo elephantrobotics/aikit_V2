@@ -7,7 +7,7 @@ import os,sys
 import serial
 import serial.tools.list_ports
 
-from pymycobot.mycobot import MyCobot
+from pymycobot.mycobot280 import MyCobot280
 
 IS_CV_4 = cv2.__version__[0] == '4'
 __version__ = "1.0"  # Adaptive seeed
@@ -149,7 +149,7 @@ class Object_detect():
 
     # init mycobot
     def run(self):
-        self.mc = MyCobot(self.plist[0], 115200) 
+        self.mc = MyCobot280(self.plist[0], 115200)
         self.mc.send_angles([0.61, 45.87, -92.37, -41.3, 2.02, 9.58], 20)
         self.check_position([0.61, 45.87, -92.37, -41.3, 2.02, 9.58], 0)
 

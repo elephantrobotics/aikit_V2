@@ -8,7 +8,7 @@ import os, sys
 import serial
 import serial.tools.list_ports
 
-from pymycobot.mycobot import MyCobot
+from pymycobot.mycobot280 import MyCobot280
 
 IS_CV_4 = cv2.__version__[0] == '4'
 __version__ = "1.0"
@@ -19,7 +19,7 @@ __version__ = "1.0"
 
 class Object_detect():
 
-    def __init__(self, camera_x=160, camera_y=15):
+    def __init__(self, camera_x=160, camera_y=0):
         # inherit the parent class
         super(Object_detect, self).__init__()
         # declare mycobot280
@@ -126,7 +126,7 @@ class Object_detect():
         # self.mc.send_coords([x, y, 150, 179.87, -3.78, -62.75], 25, 0)
         # time.sleep(3)
 
-        self.mc.send_coords([x, y, 103, 179.87, -3.78, -62.75], 40, 1)
+        self.mc.send_coords([x, y, 100, 179.87, -3.78, -62.75], 40, 1)
         data = [x, y, 103, 179.87, -3.78, -62.75]
         self.check_position(data, 1)
 
@@ -171,7 +171,8 @@ class Object_detect():
 
     # init mycobot280
     def run(self):
-        self.mc = MyCobot(self.plist[0], 115200)
+        print(self.plist[0])
+        self.mc = MyCobot280(self.plist[0], 115200)
         self.mc.send_angles([0.61, 45.87, -92.37, -41.3, 2.02, 9.58], 20)
         self.check_position([0.61, 45.87, -92.37, -41.3, 2.02, 9.58], 0)
 

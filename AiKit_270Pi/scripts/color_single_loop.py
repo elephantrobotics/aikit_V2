@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
+import traceback
+
 import cv2
 import numpy as np
 import time
 import os,sys
 import platform
 
-from pymycobot.mycobot import MyCobot
+from pymycobot.mecharm270 import MechArm270
 
 
 IS_CV_4 = cv2.__version__[0] == '4'
@@ -122,23 +124,41 @@ class Object_detect():
         # 让5号位停止工作
         self.mc.set_basic_output(5, 1)
 
+    def check_position(self, data, ids):
+        """
+        循环检测是否到位某个位置
+        :param data: 角度或者坐标
+        :param ids: 角度-0，坐标-1
+        :return:
+        """
+        try:
+            while True:
+                res = self.mc.is_in_position(data, ids)
+                # print('res', res)
+                if res == 1:
+                    time.sleep(0.1)
+                    break
+                time.sleep(0.1)
+        except Exception as e:
+            e = traceback.format_exc()
+            print(e)
+
     # Grasping motion
     def move(self, x, y, color):
         # send Angle to move mecharm270
         print(color)
         self.mc.send_angles(self.move_angles[1], 50)
-        time.sleep(3)
+        self.check_position(self.move_angles[1], 0)
 
         # send coordinates to move mycobot
-        self.mc.send_coords([x, y, 150, -176.1, 2.4, -125.1], 40, 1) # usb :rx,ry,rz -173.3, -5.48, -57.9
-        time.sleep(3)
-        
+        self.mc.send_coords([x, y, 150, -176.1, 2.4, -125.1], 40, 1)  # usb :rx,ry,rz -173.3, -5.48, -57.9
+
         # self.mc.send_coords([x, y, 150, 179.87, -3.78, -62.75], 25, 0)
         # time.sleep(3)
 
         # self.mc.send_coords([x, y, 103, 179.87, -3.78, -62.75], 25, 0)
-        self.mc.send_coords([x, y, 108, -176.1, 2.4, -125.1], 40, 1) # -178.77, -2.69, 40.15     pi
-        time.sleep(3)
+        self.mc.send_coords([x, y, 108, -176.1, 2.4, -125.1], 40, 1)  # -178.77, -2.69, 40.15     pi
+        self.check_position([x, y, 108, -176.1, 2.4, -125.1], 1)
 
         # open pump
         if "dev" in self.robot_m5 or "dev" in self.robot_wio:
@@ -149,23 +169,24 @@ class Object_detect():
 
         tmp = []
         while True:
-            if not tmp: 
-                tmp = self.mc.get_angles()    
+            if not tmp:
+                tmp = self.mc.get_angles()
             else:
                 break
         time.sleep(0.5)
-        
+
         # print(tmp)
-        self.mc.send_angles([tmp[0], 17.22, -32.51, tmp[3], 97, tmp[5]],30) # [18.8, -7.91, -54.49, -23.02, -0.79, -14.76]
-        time.sleep(3)
+        self.mc.send_angles([tmp[0], 17.22, -32.51, tmp[3], 97, tmp[5]],
+                            30)  # [18.8, -7.91, -54.49, -23.02, -0.79, -14.76]
+        self.check_position([tmp[0], 17.22, -32.51, tmp[3], 97, tmp[5]], 0)
 
         self.mc.send_coords(self.move_coords[color], 40, 1)
         # self.pub_marker(self.move_coords[color][0]/1000.0, self.move_coords[color]
         #                 [1]/1000.0, self.move_coords[color][2]/1000.0)
-        time.sleep(3)
-       
+        self.check_position(self.move_coords[color], 1)
+
         # close pump
- 
+
         if "dev" in self.robot_m5 or "dev" in self.robot_wio:
             self.pump_off()
         elif "dev" in self.robot_raspi or "dev" in self.robot_jes:
@@ -173,7 +194,7 @@ class Object_detect():
         time.sleep(5)
 
         self.mc.send_angles(self.move_angles[1], 50)
-        time.sleep(3)
+        self.check_position(self.move_angles[1], 0)
 
     # decide whether grab cube 决定是否抓取立方体
     def decide_move(self, x, y, color):
@@ -190,11 +211,11 @@ class Object_detect():
     # init mecharm270
     def run(self):
         if "dev" in self.robot_wio :
-            self.mc = MyCobot(self.robot_wio, 115200) 
+            self.mc = MechArm270(self.robot_wio, 115200)
         elif "dev" in self.robot_m5:
-            self.mc = MyCobot(self.robot_m5, 115200) 
+            self.mc = MechArm270(self.robot_m5, 115200)
         elif "dev" in self.robot_raspi:
-            self.mc = MyCobot(self.robot_raspi, 1000000)
+            self.mc = MechArm270(self.robot_raspi, 1000000)
         self.gpio_status(False)
         self.mc.send_angles([-33.31, 2.02, -10.72, -0.08, 95, -54.84], 50)
         time.sleep(3)

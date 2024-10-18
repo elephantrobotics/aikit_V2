@@ -6,7 +6,7 @@ import cv2
 import numpy as np
 import serial
 import serial.tools.list_ports
-from pymycobot.mycobot import MyCobot
+from pymycobot.mycobot320 import MyCobot320
 
 IS_CV_4 = cv2.__version__[0] == '4'
 __version__ = "1.0"
@@ -134,7 +134,7 @@ class Object_detect():
 
     # init mycobot320
     def run(self):
-        self.mc = MyCobot(self.plist[0], 115200)
+        self.mc = MyCobot320(self.plist[0], 115200)
         self.mc.send_angles([0.61, 45.87, -92.37, -41.3, 89.56, 9.58], 50)
         time.sleep(2.5)
 

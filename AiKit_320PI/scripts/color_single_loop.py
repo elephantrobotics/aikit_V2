@@ -6,7 +6,7 @@ import time
 
 import cv2
 import numpy as np
-from pymycobot.mycobot import MyCobot
+from pymycobot.mycobot320 import MyCobot320
 
 IS_CV_4 = cv2.__version__[0] == '4'
 __version__ = "1.0"
@@ -167,11 +167,11 @@ class Object_detect():
     # init mycobot320
     def run(self):
         if "dev" in self.robot_wio:
-            self.mc = MyCobot(self.robot_wio, 115200)
+            self.mc = MyCobot320(self.robot_wio, 115200)
         elif "dev" in self.robot_m5:
-            self.mc = MyCobot(self.robot_m5, 115200)
+            self.mc = MyCobot320(self.robot_m5, 115200)
         elif "dev" in self.robot_raspi:
-            self.mc = MyCobot(self.robot_raspi, 115200)
+            self.mc = MyCobot320(self.robot_raspi, 115200)
         self.pump_off()
         self.mc.send_angles([0.61, 45.87, -92.37, -41.3, 89.56, 9.58], 50)
         time.sleep(2.5)

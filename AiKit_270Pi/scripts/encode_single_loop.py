@@ -1,7 +1,7 @@
 #encoding: UTF-8
 import cv2
 import numpy as np
-from pymycobot.mycobot import MyCobot
+from pymycobot.mecharm270 import MechArm270
 import RPi.GPIO as GPIO
 import time
 import os
@@ -88,66 +88,82 @@ class Detect_marker():
             GPIO.output(20, 1)
             GPIO.output(21, 1)
 
+    def check_position(self, data, ids):
+        """
+        循环检测是否到位某个位置
+        :param data: 角度或者坐标
+        :param ids: 角度-0，坐标-1
+        :return:
+        """
+        try:
+            while True:
+                res = self.mc.is_in_position(data, ids)
+                # print('res', res)
+                if res == 1:
+                    time.sleep(0.1)
+                    break
+                time.sleep(0.1)
+        except Exception as e:
+            e = traceback.format_exc()
+            print(e)
+
     # Grasping motion
     def move(self, x, y, color):
-        
+
         print(color)
-        
+
         angles = [
             [0, 0, 0, 0, 90, 0],  # init the point
             [-33.31, 2.02, -10.72, -0.08, 95, -54.84],  # point to grab
         ]
 
         coords = [
-            [81.8, -52.3, 186.7, 174.48, 4.08, 92.41], # 初始化点
-            [2.2, 128.5, 171.6, 163.27, 10.58, -147.25], # A分拣区
-            [77.4, 122.1, 179.2, 151.66, 17.94, 178.24], # B分拣区  
-            [180.9, -99.3, 184.6, 124.4, 30.9, 80.58], # C分拣区
-            [96.5, -101.9, 185.6, 155.25, 19.14, 75.88],  # D分拣区  
+            [81.8, -52.3, 186.7, 174.48, 4.08, 92.41],  # 初始化点
+            [2.2, 128.5, 171.6, 163.27, 10.58, -147.25],  # A分拣区
+            [77.4, 122.1, 179.2, 151.66, 17.94, 178.24],  # B分拣区
+            [180.9, -99.3, 184.6, 124.4, 30.9, 80.58],  # C分拣区
+            [96.5, -101.9, 185.6, 155.25, 19.14, 75.88],  # D分拣区
         ]
-        print('real_x, real_y:', round(coords[0][0]+x, 2), round(coords[0][1]+y, 2))
+        print('real_x, real_y:', round(coords[0][0] + x, 2), round(coords[0][1] + y, 2))
         # send coordinates to move mycobot
         self.mc.send_angles(angles[0], 30)
-        time.sleep(3)
-        #self.mc.send_coords([coords[0][0]+x, -(coords[0][1]+y), 200, -178.9, -1.57, -66], 30, 0)
-        #time.sleep(3.5)
-        #self.mc.send_coords([coords[0][0]+x, -(coords[0][1]+y), 150, -178.9, -1.57, -66], 30, 0)
-        #time.sleep(3.5)
-        #self.mc.send_coords([coords[0][0]+x, -(coords[0][1]+y), 93, -178.9, -1.57, -66], 30, 0)
-        self.mc.send_coords([coords[0][0]+x, coords[0][1]+y, 200, 172.36, 5.36, 125.58], 40, 1)
-        time.sleep(3)
-        self.mc.send_coords([coords[0][0]+x, coords[0][1]+y, 150, 172.36, 5.36, 125.58], 40, 1)
-        time.sleep(3)
-        self.mc.send_coords([coords[0][0]+x, coords[0][1]+y, 70, 172.36, 5.36, 125.58], 40, 1)
-        time.sleep(3)
-        
+        self.check_position(angles[0], 0)
+
+        self.mc.send_coords([coords[0][0] + x, coords[0][1] + y, 200, 172.36, 5.36, 125.58], 40, 1)
+
+        self.mc.send_coords([coords[0][0] + x, coords[0][1] + y, 150, 172.36, 5.36, 125.58], 40, 1)
+
+        self.mc.send_coords([coords[0][0] + x, coords[0][1] + y, 70, 172.36, 5.36, 125.58], 40, 1)
+        self.check_position([coords[0][0] + x, coords[0][1] + y, 70, 172.36, 5.36, 125.58], 1)
+
         # open pump
         if "dev" in self.robot_raspi:
             self.pub_pump(True)
         time.sleep(1.5)
-        
+
         tmp = []
         while True:
-            if not tmp: 
-                tmp = self.mc.get_angles()    
+            if not tmp:
+                tmp = self.mc.get_angles()
             else:
                 break
         time.sleep(0.5)
-        
+
         # print(tmp)
-        self.mc.send_angles([tmp[0], 17.22, -32.51, tmp[3], 97, tmp[5]],30) # [18.8, -7.91, -54.49, -23.02, -0.79, -14.76]
-        time.sleep(3)
+        self.mc.send_angles([tmp[0], 17.22, -32.51, tmp[3], 97, tmp[5]],
+                            30)  # [18.8, -7.91, -54.49, -23.02, -0.79, -14.76]
+        self.check_position([tmp[0], 17.22, -32.51, tmp[3], 97, tmp[5]], 0)
         # 抓取后放置区域
-        self.mc.send_coords(coords[color], 40, 1) # coords[1] 为A分拣区，coords[2] 为B分拣区, coords[3] 为C分拣区，coords[4] 为D分拣区
-        time.sleep(4)
-   
+        self.mc.send_coords(coords[color], 40, 1)  # coords[1] 为A分拣区，coords[2] 为B分拣区, coords[3] 为C分拣区，coords[4] 为D分拣区
+        self.check_position(coords[color], 1)
+
         # close pump
         if "dev" in self.robot_raspi:
             self.pub_pump(False)
         time.sleep(5)
-        
+
         self.mc.send_angles(angles[1], 30)
-        time.sleep(2)
+        self.check_position(angles[1], 0)
 
     # decide whether grab cube
     def decide_move(self, x, y, color):
@@ -165,11 +181,11 @@ class Detect_marker():
     # init mycobot
     def init_mycobot(self):
         if "dev" in self.robot_raspi:
-            self.mc = MyCobot(self.robot_raspi, 1000000)
+            self.mc = MechArm270(self.robot_raspi, 1000000)
         elif "dev" in self.robot_m5:
-            self.mc = MyCobot(self.robot_m5, 115200)
+            self.mc = MechArm270(self.robot_m5, 115200)
         elif "dev" in self.robot_wio:
-            self.mc = MyCobot(self.robot_wio, 115200)
+            self.mc = MechArm270(self.robot_wio, 115200)
         self.pub_pump(False)
         
         self.mc.send_angles([-33.31, 2.02, -10.72, -0.08, 95, -54.84], 30)

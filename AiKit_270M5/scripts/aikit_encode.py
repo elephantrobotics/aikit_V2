@@ -1,8 +1,9 @@
 #encoding: UTF-8
+import traceback
+
 import cv2
 import numpy as np
-from pymycobot.mycobot import MyCobot
-import RPi.GPIO as GPIO
+from pymycobot.mecharm270 import MechArm270
 import time
 import os
 import platform
@@ -66,6 +67,26 @@ class Detect_marker():
         else:
             self.mc.set_basic_output(2, 1)
             self.mc.set_basic_output(5, 1)
+
+    def check_position(self, data, ids):
+        """
+        循环检测是否到位某个位置
+        :param data: 角度或者坐标
+        :param ids: 角度-0，坐标-1
+        :return:
+        """
+        try:
+            while True:
+                res = self.mc.is_in_position(data, ids)
+                # print('res', res)
+                if res == 1:
+                    time.sleep(0.1)
+                    break
+                time.sleep(0.1)
+        except Exception as e:
+            e = traceback.format_exc()
+            print(e)
+
     # Grasping motion
     def move(self, x, y, color):
         
@@ -86,22 +107,18 @@ class Detect_marker():
         print('real_x, real_y:', round(coords[0][0]+x, 2), round(coords[0][1]+y, 2))
         # send coordinates to move mycobot
         self.mc.send_angles(angles[0], 30)
-        time.sleep(3)
-        #self.mc.send_coords([coords[0][0]+x, -(coords[0][1]+y), 200, -178.9, -1.57, -66], 30, 0)
-        #time.sleep(3.5)
-        #self.mc.send_coords([coords[0][0]+x, -(coords[0][1]+y), 150, -178.9, -1.57, -66], 30, 0)
-        #time.sleep(3.5)
-        #self.mc.send_coords([coords[0][0]+x, -(coords[0][1]+y), 93, -178.9, -1.57, -66], 30, 0)
+        self.check_position(angles[0], 0)
+
         self.mc.send_coords([coords[0][0]+x, coords[0][1]+y, 200, 172.36, 5.36, 125.58], 40, 1)
-        time.sleep(3)
+
         self.mc.send_coords([coords[0][0]+x, coords[0][1]+y, 150, 172.36, 5.36, 125.58], 40, 1)
-        time.sleep(3)
+
         self.mc.send_coords([coords[0][0]+x, coords[0][1]+y, 70, 172.36, 5.36, 125.58], 40, 1)
-        time.sleep(3)
-        
+
+        self.check_position([coords[0][0]+x, coords[0][1]+y, 70, 172.36, 5.36, 125.58], 1)
+
         # open pump
-        if "dev" in self.robot_raspi:
-            self.pub_pump(True)
+        self.pub_pump(True)
         time.sleep(1.5)
         
         tmp = []
@@ -114,18 +131,17 @@ class Detect_marker():
         
         # print(tmp)
         self.mc.send_angles([tmp[0], 17.22, -32.51, tmp[3], 97, tmp[5]],30) # [18.8, -7.91, -54.49, -23.02, -0.79, -14.76]
-        time.sleep(3)
+        self.check_position([tmp[0], 17.22, -32.51, tmp[3], 97, tmp[5]], 0)
         # 抓取后放置区域
         self.mc.send_coords(coords[color], 40, 1) # coords[1] 为A分拣区，coords[2] 为B分拣区, coords[3] 为C分拣区，coords[4] 为D分拣区
-        time.sleep(4)
+        self.check_position(coords[color], 1)
    
         # close pump
-        if "dev" in self.robot_raspi:
-            self.pub_pump(False)
+        self.pub_pump(False)
         time.sleep(5)
         
         self.mc.send_angles(angles[1], 30)
-        time.sleep(2)
+        self.check_position(angles[1], 0)
 
     # decide whether grab cube
     def decide_move(self, x, y, color):
@@ -142,10 +158,10 @@ class Detect_marker():
 
     # init mycobot
     def init_mycobot(self):
-        self.mc = MyCobot(self.plist[0], 115200)
+        self.mc = MechArm270(self.plist[0], 115200)
         self.pub_pump(False)        
         self.mc.send_angles([-33.31, 2.02, -10.72, -0.08, 95, -54.84], 30)
-        time.sleep(2.5)
+        self.check_position([-33.31, 2.02, -10.72, -0.08, 95, -54.84], 0)
         
 
     def run(self):

@@ -1,8 +1,8 @@
 import time
 
-from pymycobot.mycobot import MyCobot
+from pymycobot.mycobot320 import MyCobot320
 
-mc = MyCobot('/dev/ttyAMA0', 115200)
+mc = MyCobot320('/dev/ttyAMA0', 115200)
 
 coords = [ 
         [135.0, -65.5, 280.1, 178.99, 5.38, -179.9],
