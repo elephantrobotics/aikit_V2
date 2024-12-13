@@ -203,9 +203,14 @@ class Object_detect():
 
     # calculate the coords between cube and mycobot
     def get_position(self, x, y):
-        return ((y - self.c_y) * self.ratio +
-                self.camera_x), ((x - self.c_x) * self.ratio + self.camera_y)
+        # 二维码板子摆放方向改变之前
+        # pot_x = ((y - self.c_y) * self.ratio + self.camera_x)
+        # pot_y = ((x - self.c_x) * self.ratio + self.camera_y)
 
+        # 二维码板子摆放方向改变之后
+        pot_x = ((y - self.c_y) * (-self.ratio) + self.camera_x)
+        pot_y = -((x - self.c_x) * self.ratio + self.camera_y)
+        return pot_x, pot_y
     """
     Calibrate the camera according to the calibration parameters.
     Enlarge the video pixel by 1.5 times, which means enlarge the video size by 1.5 times.
