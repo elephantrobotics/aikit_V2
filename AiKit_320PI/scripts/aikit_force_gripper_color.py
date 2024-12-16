@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 import platform
+import traceback
+
 import sys
 import time
 
@@ -15,7 +17,7 @@ __version__ = "1.0"
 
 class Object_detect():
 
-    def __init__(self, camera_x=265, camera_y=5):
+    def __init__(self, camera_x=260, camera_y=5):
         # inherit the parent class
         super(Object_detect, self).__init__()
         # declare MyCobot320
@@ -29,17 +31,17 @@ class Object_detect():
 
         # 移动角度
         self.move_angles = [
-            [0.61, 45.87, -92.37, -32.16, 89.56, 1.66],  # init the point
-            [18.8, -7.91, -54.49, -23.02, 89.56, -14.76],  # point to grab
-            [16.96, -6.85, -54.93, -19.68, 89.47, 12.83],
+            [0.61, 45.87, -92.37, -41.3, 89.56, -127],  # init the point
+            [16.96, -6.85, -54.93, -19.68, 89.47, -127],  # point to grab
+            [16.96, -6.85, -54.93, -19.68, 89.47, -127],
         ]
 
         # 移动坐标
-        self.move_coords = [
-            [30.3, -214.9, 302.3, -169.77, -8.64, -91.55],  # D Sorting area
-            [240.3, -202.2, 317.1, -152.12, -10.15, -95.73],  # C Sorting area
-            [244.5, 193.2, 330.3, -160.54, 17.35, -74.59],  # A Sorting area
-            [33.2, 205.3, 322.5, -170.22, -13.93, 92.28],  # B Sorting area
+        self.move_coords_to_angles = [
+            [-65.15, 8.17, -75.56, -8, 93.86, -10],  # D Sorting area
+            [-26, -33.92, -30.75, 0.66, 90.08, -155],  # C Sorting area
+            [54.58, -42.89, -11.16, -12.3, 90.61, -80],  # A Sorting area
+            [103.18, 9.75, -75.32, -11.16, 90.76, -30],  # B Sorting area
         ]
 
         # choose place to set cube 选择放置立方体的地方
@@ -77,26 +79,14 @@ class Object_detect():
         # Get ArUco marker params. 获取 ArUco 标记参数
         self.aruco_params = cv2.aruco.DetectorParameters_create()
 
-    def pump_on(self):
-        """Start the suction pump"""
-        self.mc.set_basic_output(1, 0)
-        self.mc.set_basic_output(2, 1)
-
-    def pump_off(self):
-        """stop suction pump m5"""
-        self.mc.set_basic_output(1, 1)
-        self.mc.set_basic_output(2, 0)
-        time.sleep(1)
-        self.mc.set_basic_output(2, 1)
-
     def gripper_on(self):
         """start gripper"""
-        self.mc.set_gripper_state(0, 100)
+        self.mc.set_pro_gripper_open(14)
         time.sleep(1.5)
 
     def gripper_off(self):
         """stop gripper"""
-        self.mc.set_gripper_state(1, 100)
+        self.mc.set_pro_gripper_close(14)
         time.sleep(1.5)
 
     # Grasping motion
@@ -113,18 +103,17 @@ class Object_detect():
         print('x,y:', round(x, 2), round(y, 2))
 
         self.mc.send_angles(self.move_angles[2], 50)
-        time.sleep(3)
+        self.check_position(self.move_angles[2], 0)
 
         # open gripper
         self.gripper_on()
-        time.sleep(3)
+        time.sleep(0.5)
 
         # send coordinates to move mycobot
-        self.mc.send_coords([x, y, 250, -174.51, 0.86, -85.93], 100, 1)  # [238.2, -19.3, 333.2, -165.54, 2.6, -83.71]
-        time.sleep(2.5)
+        self.mc.send_coords([x, y, 250, 176.53, -4.21, 53.28], 100, 1)  # [238.2, -19.3, 333.2, -165.54, 2.6, -83.71]
 
-        self.mc.send_coords([x, y, 203, -174.51, 0.86, -85.93], 100, 1)
-        time.sleep(3)
+        self.mc.send_coords([x, y, 195, 176.53, -4.21, 53.28], 100, 1)
+        self.check_position([x, y, 195, 176.53, -4.21, 53.28], 1)
 
         # close gripper
         self.gripper_off()
@@ -141,20 +130,19 @@ class Object_detect():
         # print(tmp)
         self.mc.send_angles([tmp[0], -0.71, -54.49, -23.02, 89.56, tmp[5]],
                             50)  # [18.8, -7.91, -54.49, -23.02, 89.56, -14.76]
-        time.sleep(3)
+        self.check_position([tmp[0], -0.71, -54.49, -23.02, 89.56, tmp[5]], 0)
 
-        self.mc.send_coords(self.move_coords[color], 100, 1)
-        time.sleep(6.5)
+        self.mc.send_angles(self.move_coords_to_angles[color], 30)
+        self.check_position(self.move_coords_to_angles[color], 0)
 
         # open gripper
         self.gripper_on()
-        time.sleep(6.5)
 
+        self.mc.send_angles(self.move_angles[0], 50)
+        self.check_position(self.move_angles[0], 0)
         # close gripper
         self.gripper_off()
         time.sleep(1)
-        self.mc.send_angles(self.move_angles[0], 50)
-        time.sleep(4.5)
 
     # decide whether grab cube 决定是否抓取立方体
     def decide_move(self, x, y, color):
@@ -170,13 +158,38 @@ class Object_detect():
 
     # init mycobot320
     def run(self):
-        self.mc = MyCobot320(self.plist[0], 115200)
-        self.mc.send_angles([0.61, 45.87, -92.37, -32.16, 89.56, 1.66], 40)
-        time.sleep(2.5)
-        # 设置夹爪为透传模式
-        self.mc.set_gripper_mode(0)
-        time.sleep(0.5)
+        self.mc = MyCobot320('/dev/ttyAMA0', 115200)
+        self.mc.send_angles(self.move_angles[0], 40)
+        self.check_position(self.move_angles[0], 0)
+        # 设置夹爪关闭
         self.gripper_off()
+
+    def check_position(self, data, ids, max_same_data_count=50):
+        """
+        循环检测是否到位某个位置
+        :param data: 角度或者坐标
+        :param ids: 角度-0，坐标-1
+        :return:
+        """
+        try:
+            same_data_count = 0
+            last_data = None
+            while True:
+                res = self.mc.is_in_position(data, ids)
+                # print('res', res, data)
+                if data == last_data:
+                    same_data_count += 1
+                else:
+                    same_data_count = 0
+
+                last_data = data
+                # print('count:', same_data_count)
+                if res == 1 or same_data_count >= max_same_data_count:
+                    break
+                time.sleep(0.1)
+        except Exception as e:
+            e = traceback.format_exc()
+            print(e)
 
     # draw aruco
     def draw_marker(self, img, x, y):
