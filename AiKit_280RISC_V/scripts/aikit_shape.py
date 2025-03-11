@@ -36,7 +36,7 @@ class Object_detect():
             [-6.9, 173.2, 201.5, 179.93, 0.63, 33.83],  # B Sorting area
         ]
 
-        self.robot_musepi = os.popen("ls /dev/ttyAMA*").readline()[:-1]
+        self.robot_risc_v = os.popen("ls /dev/ttyAMA*").readline()[:-1]
         self.musepi = open("/sys/devices/soc0/machine").read().strip() == "spacemit k1-x MUSE-Pi board"
 
         Device.pin_factory = LGPIOFactory(chip=0) # 显式指定/dev/gpiochip0
@@ -108,10 +108,10 @@ class Object_detect():
     def move(self, x, y, color):
         # send Angle to move mycobot280
         print(color)
+        # 过渡动作
         self.mc.send_angles(self.move_angles[1], 25)
         self.check_position(self.move_angles[1], 0)
 
-        # send coordinates to move mycobot
         self.mc.send_coords([x, y, 65.5, 179.87, -3.78, -62.75], 40, 1)
         data = [x, y, 65.5, 179.87, -3.78, -62.75]
         self.check_position(data, 1)
@@ -133,7 +133,6 @@ class Object_detect():
         self.check_position([tmp[0], -0.71, -74.49 - 20, -23.02, -0.79, tmp[5]], 0)
 
         self.mc.send_coords(self.move_coords[color], 40, 1)
-
         self.check_position(self.move_coords[color], 1)
 
         # close pump
@@ -158,7 +157,7 @@ class Object_detect():
     # init mycobot280
     def run(self):
 
-        self.mc = MyCobot280(self.robot_musepi, 1000000)
+        self.mc = MyCobot280(self.robot_risc_v, 1000000)
         self.gpio_status(False)
         self.mc.send_angles([0.61, 45.87, -92.37, -41.3, 2.02, 9.58], 20)
         self.check_position([0.61, 45.87, -92.37, -41.3, 2.02, 9.58], 0)
@@ -330,122 +329,8 @@ class Object_detect():
             return None
 
 
-def shape_single():
-    # open the camera
-    cap_num = 20
-    cap = cv2.VideoCapture(cap_num, cv2.CAP_V4L)
-    cap.set(3, 640)
-    cap.set(4, 480)
-    if not cap.isOpened():
-        cap.open()
-    # init a class of Object_detect
-    detect = Object_detect()
-    # init mycobot280
-    detect.run()
-    # Control the number of crawls 控制抓取次数
-    count = 0
+if __name__ == "__main__":
 
-    _init_ = 20
-    init_num = 0
-    nparams = 0
-    num = 0
-    real_sx = real_sy = 0
-    while cv2.waitKey(1) < 0:
-        # read camera
-        _, frame = cap.read()
-        # deal img
-        frame = detect.transform_frame(frame)
-        if _init_ > 0:
-            _init_ -= 1
-            continue
-
-        # calculate the parameters of camera clipping
-        if init_num < 20:
-            if detect.get_calculate_params(frame) is None:
-                cv2.imshow("figure", frame)
-                continue
-            else:
-                x1, x2, y1, y2 = detect.get_calculate_params(frame)
-                detect.draw_marker(frame, x1, y1)
-                detect.draw_marker(frame, x2, y2)
-                detect.sum_x1 += x1
-                detect.sum_x2 += x2
-                detect.sum_y1 += y1
-                detect.sum_y2 += y2
-                init_num += 1
-                continue
-        elif init_num == 20:
-            detect.set_cut_params(
-                (detect.sum_x1) / 20.0,
-                (detect.sum_y1) / 20.0,
-                (detect.sum_x2) / 20.0,
-                (detect.sum_y2) / 20.0,
-            )
-            detect.sum_x1 = detect.sum_x2 = detect.sum_y1 = detect.sum_y2 = 0
-            init_num += 1
-            continue
-
-        # calculate params of the coords between cube and mycobot280
-        if nparams < 10:
-            if detect.get_calculate_params(frame) is None:
-                cv2.imshow("figure", frame)
-                continue
-            else:
-                x1, x2, y1, y2 = detect.get_calculate_params(frame)
-                detect.draw_marker(frame, x1, y1)
-                detect.draw_marker(frame, x2, y2)
-                detect.sum_x1 += x1
-                detect.sum_x2 += x2
-                detect.sum_y1 += y1
-                detect.sum_y2 += y2
-                nparams += 1
-                continue
-        elif nparams == 10:
-            nparams += 1
-            # calculate and set params of calculating real coord between cube and mycobot280
-            detect.set_params(
-                (detect.sum_x1 + detect.sum_x2) / 20.0,
-                (detect.sum_y1 + detect.sum_y2) / 20.0,
-                abs(detect.sum_x1 - detect.sum_x2) / 10.0 +
-                abs(detect.sum_y1 - detect.sum_y2) / 10.0
-            )
-            print("ok")
-            continue
-
-        if count < 2:
-            # get detect result
-            # print('调用检测')
-            detect_result = detect.shape_detect(frame)
-            # print("完成检测")
-            if detect_result is None:
-                cv2.imshow("figure", frame)
-                continue
-            else:
-                x, y = detect_result
-                # calculate real coord between cube and mycobot280
-                real_x, real_y = detect.get_position(x, y)
-                if num == 20:
-
-                    detect.decide_move(real_sx / 20.0, real_sy / 20.0, detect.color)
-                    num = real_sx = real_sy = 0
-                    count += 1
-
-                else:
-                    num += 1
-                    real_sy += real_y
-                    real_sx += real_x
-        else:
-            break
-
-        cv2.imshow("figure", frame)
-
-        # close the window
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            cap.release()
-            cv2.destroyAllWindows()
-            sys.exit()
-
-def shape_loop():
     # open the camera
     cap_num = 20
     cap = cv2.VideoCapture(cap_num, cv2.CAP_V4L)
@@ -553,20 +438,3 @@ def shape_loop():
             cap.release()
             cv2.destroyAllWindows()
             sys.exit()
-
-
-if __name__ == '__main__':
-    # 提醒用户操作字典
-    print("********************************************************")
-    print("*  请输入数字选择模式(Please enter number selection mode)：*")
-    print("*  1: 单次模式(single mode)                              *")
-    print("*  2: 循环模式(loop mode)                                *")
-    print("*  3: 退出(quit)                                        *")
-    print("********************************************************")
-    mode = int(input('请选择模式(please select mode):'))
-    if mode == 1:
-        shape_single()
-    elif mode == 2:
-        shape_loop()
-    elif mode == 3:
-        exit(0)

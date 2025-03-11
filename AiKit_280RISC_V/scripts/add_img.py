@@ -22,7 +22,7 @@ def take_photo():
     # 设置特定值
 
     index = 'takephoto'
-    cap = cv2.VideoCapture(0)
+    cap = cv2.VideoCapture(20, cv2.CAP_V4L)
     cap.set(3,640)
     cap.set(4, 480)
 

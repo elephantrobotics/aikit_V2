@@ -36,7 +36,7 @@ class Object_detect():
             [-6.9, 173.2, 201.5, 179.93, 0.63, 33.83], # B Sorting area
         ]
         
-        self.robot_musepi = os.popen("ls /dev/ttyAMA*").readline()[:-1]
+        self.robot_risc_v = os.popen("ls /dev/ttyAMA*").readline()[:-1]
         self.musepi = open("/sys/devices/soc0/machine").read().strip() == "spacemit k1-x MUSE-Pi board"
 
         Device.pin_factory = LGPIOFactory(chip=0) # 显式指定/dev/gpiochip0
@@ -151,7 +151,7 @@ class Object_detect():
     # init mycobot
     def run(self):
     
-        self.mc = MyCobot280(self.robot_musepi, 1000000)
+        self.mc = MyCobot280(self.robot_risc_v, 1000000)
         self.gpio_status(False)
         self.mc.send_angles([0.61, 45.87, -92.37, -41.3, 2.02, 9.58], 20)
         self.check_position([0.61, 45.87, -92.37, -41.3, 2.02, 9.58], 0)
