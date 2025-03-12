@@ -16,7 +16,7 @@ __version__ = "1.0"  # Adaptive seeed
 
 class Object_detect():
 
-    def __init__(self, camera_x = 160, camera_y = 10):
+    def __init__(self, camera_x = 170, camera_y = 10):
         # inherit the parent class
         super(Object_detect, self).__init__()
 
@@ -28,16 +28,15 @@ class Object_detect():
             [18.8, -7.91, -54.49, -23.02, -0.79, -14.76],  # point to grab
         ]
 
-        # 移动坐标
-        self.move_coords = [
-            [132.2, -136.9, 200.8, -178.24, -3.72, -107.17],  # D Sorting area
-            [238.8, -124.1, 204.3, -169.69, -5.52, -96.52], # C Sorting area
-            [115.8, 177.3, 210.6, 178.06, -0.92, -6.11], # A Sorting area
-            [-6.9, 173.2, 201.5, 179.93, 0.63, 33.83], # B Sorting area
+        # 移动目标放置点角度
+        self.move_target_angles = [
+            [-24.87, -2.98, -92.46, 5.88, -3.07, -8.34],  # D Sorting area
+            [-13.71, -52.11, -25.4, -4.57, -3.86, -7.73],  # C Sorting area
+            [74.0, -18.1, -64.24, -9.84, -0.79, -9.49],  # A Sorting area
+            [112.93, 3.16, -96.32, 0.87, 0.26, -9.75],  # B Sorting area
         ]
         
         self.robot_riscv = os.popen("ls /dev/ttyAMA*").readline()[:-1]
-        self.musepi = open("/sys/devices/soc0/machine").read().strip() == "spacemit k1-x MUSE-Pi board"
 
         Device.pin_factory = LGPIOFactory(chip=0) # 显式指定/dev/gpiochip0
         # 初始化 GPIO 控制的设备
@@ -103,10 +102,10 @@ class Object_detect():
     # Grasping motion
     def move(self, x, y, color):
         # 过渡动作
-        self.mc.send_angles(self.move_angles[1], 25)
+        self.mc.send_angles(self.move_angles[1], 50)
         self.check_position(self.move_angles[1], 0)
 
-        self.mc.send_coords([x, y, 65, 179.87, -3.78, -62.75], 40, 1)
+        self.mc.send_coords([x, y, 65, 179.87, -3.78, -62.75], 60, 1)
         data = [x, y, 65, 179.87, -3.78, -62.75]
         self.check_position(data, 1)
 
@@ -123,17 +122,17 @@ class Object_detect():
         time.sleep(0.5)
 
         # print(tmp)
-        self.mc.send_angles([tmp[0], -0.71, -74.49, -23.02, -0.79, tmp[5]],25) # [18.8, -7.91, -54.49, -23.02, -0.79, -14.76]
+        self.mc.send_angles([tmp[0], -0.71, -74.49, -23.02, -0.79, tmp[5]],50) # [18.8, -7.91, -54.49, -23.02, -0.79, -14.76]
         self.check_position([tmp[0], -0.71, -74.49 - 20, -23.02, -0.79, tmp[5]], 0)
 
-        self.mc.send_coords(self.move_coords[color], 40, 1)
-        self.check_position(self.move_coords[color], 1)
+        self.mc.send_angles(self.move_target_angles[color], 50)
+        self.check_position(self.move_target_angles[color], 0)
 
         # close pump
         self.gpio_status(False)
         time.sleep(0.5)
 
-        self.mc.send_angles(self.move_angles[0], 25)
+        self.mc.send_angles(self.move_angles[0], 50)
         self.check_position(self.move_angles[0], 0)
 
     # decide whether grab cube
@@ -146,14 +145,16 @@ class Object_detect():
         else:
             self.cache_x = self.cache_y = 0
             # 调整吸泵吸取位置，y增大,向左移动;y减小,向右移动;x增大,前方移动;x减小,向后方移动
-            self.move(x - 5, y - 5, color)
+            self.move(x, y - 5, color)
 
     # init mycobot
     def run(self):
     
         self.mc = MyCobot280(self.robot_riscv, 1000000)
         self.gpio_status(False)
-        self.mc.send_angles([0.61, 45.87, -92.37, -41.3, 2.02, 9.58], 20)
+        if self.mc.get_fresh_mode() != 0:
+            self.mc.set_fresh_mode(0)
+        self.mc.send_angles([0.61, 45.87, -92.37, -41.3, 2.02, 9.58], 50)
         self.check_position([0.61, 45.87, -92.37, -41.3, 2.02, 9.58], 0)
 
     # draw aruco

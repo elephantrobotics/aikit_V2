@@ -10,12 +10,10 @@ from gpiozero.pins.lgpio import LGPIOFactory
 from gpiozero import Device, LED
 
 
-
-
 # y轴偏移量
-pump_y = -55
+pump_y = 20
 # x轴偏移量
-pump_x = 15
+pump_x = 170
 
 class Detect_marker():
     def __init__(self):
@@ -24,8 +22,7 @@ class Detect_marker():
         self.cache_x = self.cache_y = 0
         
         self.robot_riscv = os.popen("ls /dev/ttyAMA*").readline()[:-1]
-        self.musepi = open("/sys/devices/soc0/machine").read().strip() == "spacemit k1-x MUSE-Pi board"
-        
+
         Device.pin_factory = LGPIOFactory(chip=0) # 显式指定/dev/gpiochip0
         
         # 初始化 GPIO 控制的设备
@@ -102,22 +99,21 @@ class Detect_marker():
             [18.8, -7.91, -54.49, -23.02, -0.79, -14.76],
         ]
 
-        coords = [
-            [145.0, -65.5, 280.1, 178.99, 7.67, -179.9], # 初始化点 init point
-            [115.8, 177.3, 210.6, 178.06, -0.92, -6.11], # A分拣区 A sorting area
-            [-6.9, 173.2, 201.5, 179.93, 0.63, 33.83], # B分拣区  B sorting area
-            [238.8, -124.1, 204.3, -169.69, -5.52, -96.52], # C分拣区 C sorting area
-            [132.2, -136.9, 200.8, -178.24, -3.72, -107.17],  # D分拣区 D sorting area   
-            
+        # 移动目标放置点角度
+        move_target_angles = [
+            [74.0, -18.1, -64.24, -9.84, -0.79, -9.49],  # A Sorting area
+            [112.93, 3.16, -96.32, 0.87, 0.26, -9.75],  # B Sorting area
+            [-13.71, -52.11, -25.4, -4.57, -3.86, -7.73],  # C Sorting area
+            [-24.87, -2.98, -92.46, 5.88, -3.07, -8.34],  # D Sorting area
         ]
-        print('real_x, real_y:', round(coords[0][0]+x, 2), round(coords[0][1]+y, 2))
+        print('real_x, real_y:', round(x, 2), round(y, 2))
         # 过渡动作
         # send coordinates to move mycobot
-        self.mc.send_angles(angles[1], 25)
+        self.mc.send_angles(angles[1], 50)
         self.check_position(angles[1], 0)
         
-        self.mc.send_coords([coords[0][0]+x, coords[0][1]+y, 65.5, 178.99, -3.78, -62.9], 40, 1)
-        data = [coords[0][0]+x, coords[0][1]+y, 65.5, 178.99, -3.78, -62.9]
+        self.mc.send_coords([x, y, 65.5, 178.99, -3.78, -62.9], 60, 1)
+        data = [x, y, 65.5, 178.99, -3.78, -62.9]
         self.check_position(data, 1)
         
         # open pump
@@ -133,18 +129,18 @@ class Detect_marker():
         time.sleep(0.5)
         
         # print(tmp)
-        self.mc.send_angles([tmp[0], -0.71, -74.49, -23.02, -0.79, tmp[5]],25) # [18.8, -7.91, -54.49, -23.02, -0.79, -14.76]
+        self.mc.send_angles([tmp[0], -0.71, -74.49, -23.02, -0.79, tmp[5]],50) # [18.8, -7.91, -54.49, -23.02, -0.79, -14.76]
         self.check_position([tmp[0], -0.71, -74.49 - 20, -23.02, -0.79, tmp[5]], 0)
 
         # 抓取后放置区域
-        self.mc.send_coords(coords[color], 40, 1) # coords[1] 为A分拣区，coords[2] 为B分拣区, coords[3] 为C分拣区，coords[4] 为D分拣区
-        self.check_position(coords[color], 1)
+        self.mc.send_angles(move_target_angles[color-1], 50) # coords[1] 为A分拣区，coords[2] 为B分拣区, coords[3] 为C分拣区，coords[4] 为D分拣区
+        self.check_position(move_target_angles[color-1], 0)
         
         # close pump
         self.pub_pump(False)
         time.sleep(0.5)
 
-        self.mc.send_angles(angles[0], 25)
+        self.mc.send_angles(angles[0], 50)
         self.check_position(angles[0], 0)
 
     # decide whether grab cube
@@ -158,14 +154,16 @@ class Detect_marker():
         else:
             self.cache_x = self.cache_y = 0
             # 调整吸泵吸取位置，y增大,向左移动;y减小,向右移动;x增大,前方移动;x减小,向后方移动
-            self.move(x + 10, y + 125, color)
+            self.move(round(x, 2), round(y, 2), color)
 
     # init mycobot
     def init_mycobot(self):
         
         self.mc = MyCobot280(self.robot_riscv, 1000000)
         self.pub_pump(False)
-        self.mc.send_angles([0.61, 45.87, -92.37, -41.3, 2.02, 9.58], 20)
+        if self.mc.get_fresh_mode() != 0:
+            self.mc.set_fresh_mode(0)
+        self.mc.send_angles([0.61, 45.87, -92.37, -41.3, 2.02, 9.58], 50)
         self.check_position([0.61, 45.87, -92.37, -41.3, 2.02, 9.58], 0)
         
 
@@ -180,8 +178,6 @@ class Detect_marker():
             if not success:
                 print("It seems that the image cannot be acquired correctly.")
                 break
-            
-    
             
             # transfrom the img to model of gray
             gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
