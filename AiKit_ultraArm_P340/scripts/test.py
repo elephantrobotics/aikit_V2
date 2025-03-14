@@ -2,8 +2,21 @@
 import serial
 import os
 import serial.tools.list_ports
-from pymycobot.ultraArm import ultraArm
 import time
+import pymycobot
+from packaging import version
+# min low version require
+MAX_REQUIRE_VERSION = '3.5.3'
+current_verison = pymycobot.__version__
+print('current pymycobot library version: {}'.format(current_verison))
+if version.parse(current_verison) > version.parse(MAX_REQUIRE_VERSION):
+    from pymycobot.ultraArmP340 import ultraArmP340
+    class_name = 'new'
+else:
+    from pymycobot.ultraArm import ultraArm
+    class_name = 'old'
+    print("Note: This class is no longer maintained since v3.6.0, please refer to the project documentation: https://github.com/elephantrobotics/pymycobot/blob/main/README.md")
+
 
 plist = [
         str(x).split(" - ")[0].strip() for x in serial.tools.list_ports.comports()
@@ -23,8 +36,10 @@ plist = [
 # print(path1)
 
 
-
-ua = ultraArm(plist[0])
+if class_name == 'new':
+    ua = ultraArmP340(plist[0])
+else:
+    ua = ultraArm(plist[0])
 print(plist[0])
 # print(plist[1])
 ua.go_zero()

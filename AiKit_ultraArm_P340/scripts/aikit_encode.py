@@ -1,9 +1,22 @@
 import cv2 as cv
 import numpy as np
-from pymycobot.ultraArm import ultraArm
 import time
 import serial
 import serial.tools.list_ports
+import pymycobot
+from packaging import version
+# min low version require
+MAX_REQUIRE_VERSION = '3.5.3'
+current_verison = pymycobot.__version__
+print('current pymycobot library version: {}'.format(current_verison))
+if version.parse(current_verison) > version.parse(MAX_REQUIRE_VERSION):
+    from pymycobot.ultraArmP340 import ultraArmP340
+    class_name = 'new'
+else:
+    from pymycobot.ultraArm import ultraArm
+    class_name = 'old'
+    print("Note: This class is no longer maintained since v3.6.0, please refer to the project documentation: https://github.com/elephantrobotics/pymycobot/blob/main/README.md")
+
 
 
 # y轴偏移量
@@ -117,7 +130,10 @@ class Detect_marker():
 
     # init mycobot
     def init_mycobot(self):
-        self.ua = ultraArm(self.plist[0])
+        if class_name == 'old':
+            self.ua = ultraArm(self.plist[0])
+        else:
+            self.ua = ultraArmP340(self.plist[0])
         self.ua.go_zero()
         self.pub_pump(False)
         self.ua.set_angles([25.55, 0.0, 15.24], 50)
