@@ -5,13 +5,12 @@ import time
 import datetime
 import threading
 import os,sys
-import matplotlib.pyplot as plt
 import serial
 import serial.tools.list_ports
 import pymycobot
 from packaging import version
 # min low version require
-MAX_REQUIRE_VERSION = '3.5.3'
+MAX_REQUIRE_VERSION = '3.9.1'
 current_verison = pymycobot.__version__
 print('current pymycobot library version: {}'.format(current_verison))
 if version.parse(current_verison) > version.parse(MAX_REQUIRE_VERSION):
