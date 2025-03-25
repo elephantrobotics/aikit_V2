@@ -16,7 +16,7 @@ __version__ = "1.0"
 
 class Object_detect():
 
-    def __init__(self, camera_x=265, camera_y=5):
+    def __init__(self, camera_x=260, camera_y=0):
         # inherit the parent class
         super(Object_detect, self).__init__()
 
@@ -27,19 +27,19 @@ class Object_detect():
         ]
         # 移动角度
         self.move_angles = [
-            [0.61, 45.87, -92.37, -32.16, 89.56, 1.66],  # init the point
+            [0.61, 45.87, -92.37, -41.3, 89.56, 0],  # init the point
             [18.8, -7.91, -54.49, -23.02, 89.56, -14.76],  # point to grab
-            [16.96, -6.85, -54.93, -19.68, 89.47, 12.83],
+            [16.61, -6.85, -56.51, -20.21, 89.73, 14],
         ]
 
-        # 移动坐标
-        self.move_coords = [
-            [30.3, -214.9, 302.3, -169.77, -8.64, -91.55],  # D Sorting area
-            [240.3, -202.2, 317.1, -152.12, -10.15, -95.73],  # C Sorting area
-            [244.5, 193.2, 330.3, -160.54, 17.35, -74.59],  # A Sorting area
-            [33.2, 205.3, 322.5, -170.22, -13.93, 92.28],  # B Sorting area
+        # 移动目标位置角度
+        self.move_coords_to_angles = [
+            [-59.15, 8.17, -81.56, 5.97, 93.86, -58.09],  # D Sorting area
+            [-23.9, -33.92, -38.75, 9.66, 90.08, -20.83],  # C Sorting area
+            [54.58, -42.89, -11.16, -12.3, 90.61, 42.01],  # A Sorting area
+            [103.18, 9.75, -75.32, -11.16, 96.76, -78.83],  # B Sorting area
         ]
-        
+
         # which robot: AMA* is riscv
         self.robot_riscv = os.popen("ls /dev/ttyAMA*").readline()[:-1]
 
@@ -83,7 +83,11 @@ class Object_detect():
         try:
             same_data_count = 0
             last_data = None
+            start_time = time.time()
             while True:
+                # 超时检测
+                if (time.time() - start_time) >= 3:
+                    break
                 res = self.mc.is_in_position(data, ids)
                 # print('res', res, data)
                 if data == last_data:
@@ -107,14 +111,14 @@ class Object_detect():
         # send Angle to move mycobot320
         self.mc.send_angles(self.move_angles[2], 50)
         self.check_position(self.move_angles[2], 0)
-        
+
         # open gripper
         self.gripper_on()
         time.sleep(1.5)
         # send coordinates to move mycobot
-        self.mc.send_coords([x, y, 250, -174.51, 0.86, -85.93], 100, 1)
-        self.mc.send_coords([x, y, 203, -174.51, 0.86, -85.93], 100, 1)
-        self.check_position([x, y, 203, -174.51, 0.86, -85.93], 1)
+        self.mc.send_coords([x, y, 250, -176.73, 0.37, -87.98], 100, 1)
+        self.mc.send_coords([x, y, 185, -176.73, 0.37, -87.98], 100, 1)
+        self.check_position([x, y, 185, -176.73, 0.37, -87.98], 1, max_same_data_count=20)
         # close gripper
         self.gripper_off()
         time.sleep(1.5)
@@ -132,8 +136,8 @@ class Object_detect():
                             35)  # [18.8, -7.91, -54.49, -23.02, -0.79, -14.76]
         self.check_position([tmp[0], -0.71, -54.49, -23.02, 89.56, tmp[5]], 0)
 
-        self.mc.send_coords(self.move_coords[color], 100, 1)
-        self.check_position(self.move_coords[color], 1)
+        self.mc.send_angles(self.move_coords_to_angles[color], 50)
+        self.check_position(self.move_coords_to_angles[color], 0)
 
         # open gripper
         self.gripper_on()
@@ -164,11 +168,13 @@ class Object_detect():
         :return: None
         """
         self.mc = MyCobot320(self.robot_riscv, 115200)
-        self.mc.send_angles([0.61, 45.87, -92.37, -41.3, 89.56, 9.58], 40)
-        self.check_position([0.61, 45.87, -92.37, -41.3, 89.56, 9.58], 0)
+        if self.mc.get_fresh_mode() != 0:
+            self.mc.set_fresh_mode(0)
+        self.mc.send_angles(self.move_angles[0], 40)
+        self.check_position(self.move_angles[0], 0)
         # 设置夹爪为透传模式
         self.mc.set_gripper_mode(0)
-        time.sleep(0.5)
+        time.sleep(0.05)
         self.gripper_off()
 
     # draw aruco
@@ -242,6 +248,7 @@ class Object_detect():
         pot_x = ((y - self.c_y) * (-self.ratio) + self.camera_x)
         pot_y = -((x - self.c_x) * self.ratio + self.camera_y)
         return pot_x, pot_y
+
     """
     Calibrate the camera according to the calibration parameters.
     Enlarge the video pixel by 1.5 times, which means enlarge the video size by 1.5 times.
@@ -465,8 +472,8 @@ def run():
     res_queue[2] = parse_folder('res/A')
     res_queue[3] = parse_folder('res/B')
 
-    sift = cv2.xfeatures2d.SIFT_create()
-    # sift = cv2.SIFT_create()
+    # sift = cv2.xfeatures2d.SIFT_create()
+    sift = cv2.SIFT_create()
     kp_list, desc_list = compute_keypoints_and_descriptors(sift, res_queue)
 
     # init a class of Object_detect

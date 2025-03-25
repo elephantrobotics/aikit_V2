@@ -1,6 +1,5 @@
 # encoding: UTF-8
 import os
-import platform
 import time
 import traceback
 
@@ -12,9 +11,9 @@ from gpiozero import Device
 from gpiozero import LED
 
 # y轴偏移量
-pump_y = -55
+pump_y = -30
 # x轴偏移量
-pump_x = 15
+pump_x = 240
 
 
 class Detect_marker():
@@ -57,7 +56,7 @@ class Detect_marker():
         self.dist_coeffs = np.array(([[3.41360787e-01, -2.52114260e+00, -1.28012469e-03, 6.70503562e-03,
                                        2.57018000e+00]]))
 
-    # 控制吸泵      
+    # 控制吸泵
     def pub_pump(self, flag):
         if flag:
             """start the suction pump"""
@@ -74,7 +73,7 @@ class Detect_marker():
             self.pump.off()
             self.valve.on()
 
-    def check_position(self, data, ids):
+    def check_position(self, data, ids, max_same_data_count=50):
         """
         循环检测是否到位某个位置
         :param data: 角度或者坐标
@@ -82,15 +81,19 @@ class Detect_marker():
         :return:
         """
         try:
-            start_time = time.time()
+            same_data_count = 0
+            last_data = None
             while True:
-                # 超时检测
-                if (time.time() - start_time) >= 3:
-                    break
                 res = self.mc.is_in_position(data, ids)
-                # print('res', res)
-                if res == 1:
-                    time.sleep(0.1)
+                # print('res', res, data)
+                if data == last_data:
+                    same_data_count += 1
+                else:
+                    same_data_count = 0
+
+                last_data = data
+                print(res,'count:', same_data_count)
+                if res == 1 or same_data_count >= max_same_data_count:
                     break
                 time.sleep(0.1)
         except Exception as e:
@@ -114,20 +117,18 @@ class Detect_marker():
             [17.22, -5.27, -52.47, -25.75, 89.73, -0.26],
         ]
 
-        coords = [
-            [145.0, -65.5, 280.1, 178.99, 7.67, -179.9],  # 初始化点 init point
-            [253.8, 236.8, 224.6, -170, 6.87, -77.91],  # A分拣区 A sorting area
-            [35.9, 235.4, 211.8, -169.33, -9.27, 88.3],  # B分拣区  B sorting area
-            [266.5, -219.7, 209.3, -170, -3.64, -94.62],  # C分拣区 C sorting area
-            [32, -228.3, 201.6, -168.07, -7.17, -92.56],  # D分拣区 D sorting area
+        coords_to_angles = [
+            [58.178, -55.45, -28.74, 3.51, 87.8, 46.14],  # A分拣区 A sorting area
+            [99.58, -5.0, -92.9, 6.32, 87.89, -77.78],  # B分拣区  B sorting area
+            [-24.69, -54.58, -36.65, 9.31, 90.35, -20.74],  # C分拣区 C sorting area
+            [-60.9, 1.75, -98.45, 24.69, 90.17, -58.62],  # D分拣区 D sorting area
         ]
-        print('real_x, real_y:', round(coords[0][0] + x, 2), round(coords[0][1] + y, 2))
+        print('real_x, real_y:', round(x, 2), round(y, 2))
         # send coordinates to move mycobot
         self.mc.send_angles(angles[2], 50)
         self.check_position(angles[2], 0)
-        # self.mc.send_coords([coords[0][0] + x, coords[0][1] + y, 240, 178.99, -3.78, -62.9], 100, 1)
-        self.mc.send_coords([coords[0][0] + x, coords[0][1] + y, 100.5, 178.99, -3.78, -62.9], 100, 1)
-        self.check_position([coords[0][0] + x, coords[0][1] + y, 100.5, 178.99, -3.78, -62.9], 1)
+        self.mc.send_coords([x, y, 94, -176, -0.32, -72.79], 100, 1)
+        self.check_position([x, y, 94, -176, -0.32, -72.79], 1, max_same_data_count=30)
 
         # open pump
         self.pub_pump(True)
@@ -138,14 +139,15 @@ class Detect_marker():
                 tmp = self.mc.get_angles()
             else:
                 break
-        time.sleep(0.5)
+        time.sleep(0.05)
+        print(self.mc.get_coords())
         # print(tmp)
         self.mc.send_angles([tmp[0], -0.71, -54.49, -23.02, 89.56, tmp[5]],
                             50)  # [18.8, -7.91, -54.49, -23.02, -0.79, -14.76]
         self.check_position([tmp[0], -0.71, -54.49, -23.02, 89.56, tmp[5]], 0)
         # 抓取后放置区域
-        self.mc.send_coords(coords[color], 100, 1)  # coords[1] 为A分拣区，coords[2] 为B分拣区, coords[3] 为C分拣区，coords[4] 为D分拣区
-        self.check_position(coords[color], 1)
+        self.mc.send_angles(coords_to_angles[color-1], 50)  # coords[1] 为A分拣区，coords[2] 为B分拣区, coords[3] 为C分拣区，coords[4] 为D分拣区
+        self.check_position(coords_to_angles[color-1], 0)
         # close pump
         self.pub_pump(False)
         time.sleep(1.5)
@@ -164,13 +166,15 @@ class Detect_marker():
         else:
             self.cache_x = self.cache_y = 0
             # 调整吸泵吸取位置，y增大,向左移动;y减小,向右移动;x增大,前方移动;x减小,向后方移动
-            self.move(x + 105, y + 130, color)
+            self.move(round(-x, 2), round(-y, 2), color)
 
     # init mycobot
     def init_mycobot(self):
         self.mc = MyCobot320(self.robot_riscv, 115200)
+        if self.mc.get_fresh_mode() != 0:
+            self.mc.set_fresh_mode(0)
         self.pub_pump(False)
-        self.mc.send_angles([0.61, 45.87, -92.37, -41.3, 89.56, 9.58], 35)
+        self.mc.send_angles([0.61, 45.87, -92.37, -41.3, 89.56, 9.58], 50)
         self.check_position([0.61, 45.87, -92.37, -41.3, 89.56, 9.58], 0)
 
     def run(self):
@@ -194,14 +198,15 @@ class Detect_marker():
             )
 
             # Determine the placement point of the QR code
-            if ids == np.array([[1]]):
-                self.color = 1
-            elif ids == np.array([[2]]):
-                self.color = 2
-            elif ids == np.array([[3]]):
-                self.color = 3
-            elif ids == np.array([[4]]):
-                self.color = 4
+            if ids is not None and len(ids) > 0:
+                if np.array_equal(ids, np.array([[1]])):
+                    self.color = 1
+                elif np.array_equal(ids, np.array([[2]])):
+                    self.color = 2
+                elif np.array_equal(ids, np.array([[3]])):
+                    self.color = 3
+                elif np.array_equal(ids, np.array([[4]])):
+                    self.color = 4
 
             if len(corners) > 0:
                 if ids is not None:
@@ -214,7 +219,7 @@ class Detect_marker():
                     (rvec - tvec).any()
                     xyz = tvec[0, 0, :]
                     # calculate the coordinates of the aruco relative to the pump
-                    xyz = [round(xyz[0] * 1000 + pump_y, 2), round(xyz[1] * 1000 + pump_x, 2), round(xyz[2] * 1000, 2)]
+                    xyz = [round(xyz[0] * 1000 - pump_y, 2), round(xyz[1] * 1000 - pump_x, 2), round(xyz[2] * 1000, 2)]
 
                     # cv2.putText(img, str(xyz[:2]), (0, 64), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
                     for i in range(rvec.shape[0]):

@@ -30,12 +30,12 @@ class Object_detect():
             [17.22, -5.27, -52.47, -25.75, 89.73, -0.26],
         ]
 
-        # 移动坐标
-        self.move_coords = [
-            [32, -228.3, 201.6, -168.07, -7.17, -92.56],  # D Sorting area
-            [266.5, -219.7, 209.3, -170, -3.64, -94.62],  # C Sorting area
-            [253.8, 236.8, 224.6, -170, 6.87, -77.91],  # A Sorting area
-            [35.9, 235.4, 211.8, -169.33, -9.27, 88.3],  # B Sorting area
+        # 移动目标角度
+        self.move_coords_to_angles = [
+            [-60.9, 1.75, -98.45, 24.69, 90.17, -58.62],  # D Sorting area
+            [-24.69, -54.58, -36.65, 9.31, 90.35, -20.74],  # C Sorting area
+            [58.178, -55.45, -28.74, 3.51, 87.8, 46.14],  # A Sorting area
+            [99.58, -5.0, -92.9, 6.32, 87.89, -77.78],  # B Sorting area
         ]
 
         self.robot_riscv = os.popen("ls /dev/ttyAMA*").readline()[:-1]
@@ -129,9 +129,9 @@ class Object_detect():
         self.check_position(self.move_angles[2], 0)
 
         # send coordinates to move mycobot
-        self.mc.send_coords([x, y, 230, -173.84, -0.14, -74.37], 100, 1)
+        # self.mc.send_coords([x, y, 230, -173.84, -0.14, -74.37], 100, 1)
         self.mc.send_coords([x, y, 100, -173.84, -0.14, -74.37], 100, 1)  #
-        self.check_position([x, y, 100, -173.84, -0.14, -74.37], 1)
+        self.check_position([x, y, 100, -173.84, -0.14, -74.37], 1, max_same_data_count=30)
 
         # open pump
         self.gpio_status(True)
@@ -150,12 +150,12 @@ class Object_detect():
                             35)  # [18.8, -7.91, -54.49, -23.02, -0.79, -14.76]
         self.check_position([tmp[0], -0.71, -54.49, -23.02, 89.56, tmp[5]], 0)
 
-        self.mc.send_coords(self.move_coords[color], 100, 1)
-        self.check_position(self.move_coords[color], 1)
+        self.mc.send_angles(self.move_coords_to_angles[color], 50)
+        self.check_position(self.move_coords_to_angles[color], 0)
 
         # close pump
         self.gpio_status(False)
-        time.sleep(1.5)
+        time.sleep(0.5)
 
         self.mc.send_angles(self.move_angles[0], 50)
         self.check_position(self.move_angles[0], 0)
@@ -177,6 +177,8 @@ class Object_detect():
     def run(self):
 
         self.mc = MyCobot320(self.robot_riscv, 115200)
+        if self.mc.get_fresh_mode() != 0:
+            self.mc.set_fresh_mode(0)
         self.gpio_status(False)
         self.mc.send_angles([0.61, 45.87, -92.37, -41.3, 89.56, 9.58], 50)
         self.check_position([0.61, 45.87, -92.37, -41.3, 89.56, 9.58], 0)

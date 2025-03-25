@@ -1,27 +1,23 @@
 # encoding: UTF-8
-import platform
 import traceback
 
 import time
 
 import cv2
 import numpy as np
-import serial
 from pymycobot.mycobot320 import MyCobot320
 
 # y轴偏移量
-pump_y = -55
+pump_y = -30
 # x轴偏移量
-pump_x = 15
+pump_x = 235
 
 
 class Detect_marker():
-    def __init__(self, offset_x=8, offset_y=5):
+    def __init__(self):
 
         # set cache of real coord
         self.cache_x = self.cache_y = 0
-        self.offset_x = offset_x
-        self.offset_y = offset_y
 
         # Creating a Camera Object
         cap_num = 20
@@ -83,8 +79,6 @@ class Detect_marker():
     def move(self, x, y, color, yaw_degrees):
 
         print(color, yaw_degrees)
-        x = 365 - x
-        y = -y + 54
         print('x, y:', x, y)
 
         angles = [
@@ -94,13 +88,11 @@ class Detect_marker():
         ]
 
         coords_to_angels = [
-            [145.0, -65.5, 280.1, 178.99, 7.67, -179.9],  # 初始化点 init point
             [54.58, -42.89, -11.16, -12.3, 90.61, -80],  # A分拣区 A sorting area
             [103.18, 9.75, -75.32, -11.16, 90.76, -30],  # B分拣区  B sorting area
             [-26, -33.92, -30.75, 0.66, 90.08, -155],  # C分拣区 C sorting area
             [-65.15, 8.17, -75.56, -8, 93.86, -10],  # D分拣区 D sorting area
         ]
-        self.home_coords = [0.61, 0.87, -92.37, -41.3, 89.56, 0]
         self.mc.send_angles(angles[2], 30)
         self.check_position(angles[2], 0)
 
@@ -119,13 +111,13 @@ class Detect_marker():
         time.sleep(0.1)
 
         self.mc.send_coords(
-            [self.home_coords[0] + x, self.home_coords[1] + y, 250, tmp_coords[3], tmp_coords[4], tmp_coords[5]], 100,
+            [x, y, 250, tmp_coords[3], tmp_coords[4], tmp_coords[5]], 100,
             1)
         self.mc.send_coords(
-            [self.home_coords[0] + x, self.home_coords[1] + y, 200, tmp_coords[3], tmp_coords[4], tmp_coords[5]], 100,
+            [ x, y, 185, tmp_coords[3], tmp_coords[4], tmp_coords[5]], 100,
             1)
         self.check_position(
-            [self.home_coords[0] + x, self.home_coords[1] + y, 200, tmp_coords[3], tmp_coords[4], tmp_coords[5]], 1)
+            [x, y, 185, tmp_coords[3], tmp_coords[4], tmp_coords[5]], 1, max_same_data_count=20)
 
         # close gripper
         self.gripper_off()
@@ -144,9 +136,8 @@ class Detect_marker():
         self.mc.send_angle(6, -127, 80)
         self.check_position([16.96, -6.85, -54.93, -19.68, 89.47, -127], 0)
         # 抓取后放置区域
-        self.mc.send_angles(coords_to_angels[color],
-                            30)  # coords_to_angels[1] 为A分拣区，coords_to_angels[2] 为B分拣区, coords_to_angels[3] 为C分拣区，coords_to_angels[4] 为D分拣区
-        self.check_position(coords_to_angels[color], 0)
+        self.mc.send_angles(coords_to_angels[color-1],50)  # coords_to_angels[1] 为A分拣区，coords_to_angels[2] 为B分拣区, coords_to_angels[3] 为C分拣区，coords_to_angels[4] 为D分拣区
+        self.check_position(coords_to_angels[color-1], 0)
 
         # open gripper
         self.gripper_on()
@@ -167,7 +158,11 @@ class Detect_marker():
         try:
             same_data_count = 0
             last_data = None
+            start_time = time.time()
             while True:
+                # 超时检测
+                if (time.time() - start_time) >= 3:
+                    break
                 res = self.mc.is_in_position(data, ids)
                 # print('res', res, data)
                 if data == last_data:
@@ -195,11 +190,13 @@ class Detect_marker():
         else:
             self.cache_x = self.cache_y = 0
             # 调整吸泵吸取位置，y增大,向左移动;y减小,向右移动;x增大,前方移动;x减小,向后方移动
-            self.move(x + 100, y + 140, color, yaw_degrees)
+            self.move(round(-x, 2), round(-y, 2), color, yaw_degrees)
 
     # init mycobot
     def init_mycobot(self):
         self.mc = MyCobot320('/dev/ttyAMA0', 115200)
+        if self.mc.get_fresh_mode() != 0:
+            self.mc.set_fresh_mode(0)
         self.mc.send_angles([0.61, 45.87, -92.37, -41.3, 89.56, -127], 40)
         self.check_position([0.61, 45.87, -92.37, -41.3, 89.56, -127], 0)
         self.gripper_off()
@@ -246,8 +243,8 @@ class Detect_marker():
                     (rvec - tvec).any()
                     xyz = tvec[0, 0, :]
                     # calculate the coordinates of the aruco relative to the pump
-                    xyz = [round(xyz[0] * 1000 + pump_y - self.offset_y, 2),
-                           round(xyz[1] * 1000 + pump_x - self.offset_x, 2), round(xyz[2] * 1000, 2)]
+                    xyz = [round(xyz[0] * 1000 - pump_y, 2),
+                           round(xyz[1] * 1000 - pump_x, 2), round(xyz[2] * 1000, 2)]
                     # 从旋转向量（rvec）计算旋转矩阵
                     rotation_matrix, _ = cv2.Rodrigues(rvec)
 

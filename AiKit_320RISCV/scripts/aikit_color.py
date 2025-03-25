@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import os
-import platform
 import sys
 import time
 import traceback
@@ -31,12 +30,12 @@ class Object_detect():
             [17.22, -5.27, -52.47, -25.75, 89.73, -0.26],
         ]
 
-        # 移动坐标
-        self.move_coords = [
-            [28.9, -226, 246, -171.13, -3.94, -92.37],  # D Sorting area
-            [253.3, -216.1, 257, -163.12, -6.12, -95.27],  # C Sorting area
-            [241.8, 219.5, 270.6, -168.47, 10.42, -76.84],  # A Sorting area
-            [37.8, 233, 251.4, -170.6, -6.75, 88.53],  # B Sorting area
+        # 移动目标角度
+        self.move_coords_to_angles = [
+            [-60.9, 1.75, -98.45, 24.69, 90.17, -58.62],  # D Sorting area
+            [-24.69, -54.58, -36.65, 9.31, 90.35, -20.74],  # C Sorting area
+            [58.178, -55.45, -28.74, 3.51, 87.8, 46.14],  # A Sorting area
+            [99.58, -5.0, -92.9, 6.32, 87.89, -77.78],  # B Sorting area
         ]
 
         # which robot: AMA* is riscv
@@ -107,7 +106,7 @@ class Object_detect():
             last_data = None
             while True:
                 res = self.mc.is_in_position(data, ids)
-                # print('res', res, data)
+                # print('res', res, pos_data)
                 if data == last_data:
                     same_data_count += 1
                 else:
@@ -151,8 +150,8 @@ class Object_detect():
         # send coordinates to move mycobot
         # self.mc.send_coords([x, y, 250, -173.84, -0.14, -74.37], 100, 1)
 
-        self.mc.send_coords([x, y, 150, -173.84, -0.14, -74.37], 100, 1)
-        self.check_position([x, y, 150, -173.84, -0.14, -74.37], 1)
+        self.mc.send_coords([x, y, 145, -173.84, -0.14, -74.37], 100, 1)
+        self.check_position([x, y, 145, -173.84, -0.14, -74.37], 1, max_same_data_count=20)
 
         # open pump
         self.gpio_status(True)
@@ -167,12 +166,12 @@ class Object_detect():
         time.sleep(0.5)
 
         # print(tmp)
-        self.mc.send_angles([tmp[0], -0.71, -54.49, -23.02, 89.56, tmp[5]],
-                            25)  # [18.8, -7.91, -54.49, -23.02, -0.79, -14.76]
-        self.check_position([tmp[0], -0.71, -54.49, -23.02, 89.56, tmp[5]], 0)
+        self.mc.send_angles([tmp[0], -0.71, -54.49, -23.02, 89.56, tmp[5]],50)
+        data_list = [tmp[0], -0.71, -54.49, -23.02, 89.56, tmp[5]]
+        self.check_position(data_list,0)
 
-        self.mc.send_coords(self.move_coords[color], 100, 1)
-        self.check_position(self.move_angles[color], 1)
+        self.mc.send_angles(self.move_coords_to_angles[color], 50)
+        self.check_position(self.move_coords_to_angles[color], 0)
 
         # close pump
         self.gpio_status(False)
@@ -200,8 +199,10 @@ class Object_detect():
         :return: None
         """
         self.mc = MyCobot320(self.robot_riscv, 115200)
+        if self.mc.get_fresh_mode() != 0:
+            self.mc.set_fresh_mode(0)
         self.gpio_status(False)
-        self.mc.send_angles([0.61, 45.87, -92.37, -41.3, 89.56, 9.58], 20)
+        self.mc.send_angles([0.61, 45.87, -92.37, -41.3, 89.56, 9.58], 50)
         self.check_position([0.61, 45.87, -92.37, -41.3, 89.56, 9.58], 0)
 
     # draw aruco
@@ -245,7 +246,7 @@ class Object_detect():
         else:
             return None
 
-    # set camera clipping parameters 设置相机裁剪参数 
+    # set camera clipping parameters 设置相机裁剪参数
     def set_cut_params(self, x1, y1, x2, y2):
         self.x1 = int(x1)
         self.y1 = int(y1)
@@ -395,7 +396,6 @@ def main():
     detect = Object_detect()
     # init mycobot320
     detect.run()
-
     _init_ = 20
     init_num = 0
     nparams = 0
@@ -408,6 +408,7 @@ def main():
         frame = cv2.rotate(frame, cv2.ROTATE_180)
         # deal img
         frame = detect.transform_frame(frame)
+        # print('frameee',frame)
         # calculate the parameters of camera clipping 计算相机裁剪的参数
         if init_num < 20:
             calculate_params = detect.get_calculate_params(frame)
@@ -431,7 +432,6 @@ def main():
             detect.sum_x1 = detect.sum_x2 = detect.sum_y1 = detect.sum_y2 = 0
             init_num += 1
             continue
-
         # calculate params of the coords between cube and mycobot320 计算立方体和 mycobot 之间坐标的参数
         if nparams < 10:
             calculate_params = detect.get_calculate_params(frame)

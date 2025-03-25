@@ -17,7 +17,7 @@ __version__ = "1.0"
 
 class Object_detect():
 
-    def __init__(self, camera_x=260, camera_y=5):
+    def __init__(self, camera_x=250, camera_y=5):
         # inherit the parent class
         super(Object_detect, self).__init__()
         # declare MyCobot320
@@ -112,8 +112,8 @@ class Object_detect():
         # send coordinates to move mycobot
         self.mc.send_coords([x, y, 250, 176.53, -4.21, 53.28], 100, 1)  # [238.2, -19.3, 333.2, -165.54, 2.6, -83.71]
 
-        self.mc.send_coords([x, y, 195, 176.53, -4.21, 53.28], 100, 1)
-        self.check_position([x, y, 195, 176.53, -4.21, 53.28], 1)
+        self.mc.send_coords([x, y, 185, 176.53, -4.21, 53.28], 100, 1)
+        self.check_position([x, y, 185, 176.53, -4.21, 53.28], 1, max_same_data_count=20)
 
         # close gripper
         self.gripper_off()
@@ -132,7 +132,7 @@ class Object_detect():
                             50)  # [18.8, -7.91, -54.49, -23.02, 89.56, -14.76]
         self.check_position([tmp[0], -0.71, -54.49, -23.02, 89.56, tmp[5]], 0)
 
-        self.mc.send_angles(self.move_coords_to_angles[color], 30)
+        self.mc.send_angles(self.move_coords_to_angles[color], 50)
         self.check_position(self.move_coords_to_angles[color], 0)
 
         # open gripper
@@ -159,6 +159,8 @@ class Object_detect():
     # init mycobot320
     def run(self):
         self.mc = MyCobot320('/dev/ttyAMA0', 115200)
+        if self.mc.get_fresh_mode() != 0:
+            self.mc.set_fresh_mode(0)
         self.mc.send_angles(self.move_angles[0], 40)
         self.check_position(self.move_angles[0], 0)
         # 设置夹爪关闭
@@ -174,7 +176,11 @@ class Object_detect():
         try:
             same_data_count = 0
             last_data = None
+            start_time = time.time()
             while True:
+                # 超时检测
+                if (time.time() - start_time) >= 3:
+                    break
                 res = self.mc.is_in_position(data, ids)
                 # print('res', res, data)
                 if data == last_data:

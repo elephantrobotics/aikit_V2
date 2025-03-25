@@ -7,7 +7,6 @@ from multiprocessing import Process, Pipe
 
 import cv2
 import numpy as np
-import serial
 from pymycobot.mycobot320 import MyCobot320
 
 IS_CV_4 = cv2.__version__[0] == '4'
@@ -16,7 +15,7 @@ __version__ = "1.0"
 
 class Object_detect():
 
-    def __init__(self, camera_x=260, camera_y=5):
+    def __init__(self, camera_x=250, camera_y=5):
         # inherit the parent class
         super(Object_detect, self).__init__()
 
@@ -56,7 +55,7 @@ class Object_detect():
         self.aruco_dict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_6X6_250)
         # Get ArUco marker params.
         self.aruco_params = cv2.aruco.DetectorParameters_create()
-        
+
     def gripper_on(self):
         """start gripper"""
         self.mc.set_pro_gripper_open(14)
@@ -74,14 +73,14 @@ class Object_detect():
         # send Angle to move mycobot320
         self.mc.send_angles(self.move_angles[2], 50)
         self.check_position(self.move_angles[2], 0)
-        
+
         # open gripper
         self.gripper_on()
         time.sleep(0.5)
         # send coordinates to move mycobot
         self.mc.send_coords([x, y, 250, 176.53, -4.21, 53.28], 100, 1)
-        self.mc.send_coords([x, y, 203, 176.53, -4.21, 53.28], 100, 1)
-        self.check_position([x, y, 195, 176.53, -4.21, 53.28], 1)
+        self.mc.send_coords([x, y, 185, 176.53, -4.21, 53.28], 100, 1)
+        self.check_position([x, y, 185, 176.53, -4.21, 53.28], 1, max_same_data_count=20)
         # close gripper
         self.gripper_off()
 
@@ -98,7 +97,7 @@ class Object_detect():
                             25)  # [18.8, -7.91, -54.49, -23.02, -0.79, -14.76]
         self.check_position([tmp[0], -0.71, -54.49, -23.02, 89.56, tmp[5]], 0)
 
-        self.mc.send_angles(self.move_coords_to_angles[color], 30)
+        self.mc.send_angles(self.move_coords_to_angles[color], 50)
         self.check_position(self.move_coords_to_angles[color], 0)
 
         # open gripper
@@ -126,6 +125,8 @@ class Object_detect():
     # init mycobot
     def run(self):
         self.mc = MyCobot320('/dev/ttyAMA0', 115200)
+        if self.mc.get_fresh_mode() != 0:
+            self.mc.set_fresh_mode(0)
         self.mc.send_angles(self.move_angles[0], 40)
         self.check_position(self.move_angles[0], 0)
         # 设置夹爪关闭
@@ -141,7 +142,11 @@ class Object_detect():
         try:
             same_data_count = 0
             last_data = None
+            start_time = time.time()
             while True:
+                # 超时检测
+                if (time.time() - start_time) >= 3:
+                    break
                 res = self.mc.is_in_position(data, ids)
                 # print('res', res, data)
                 if data == last_data:
@@ -453,8 +458,8 @@ def run():
     res_queue[2] = parse_folder('res/A')
     res_queue[3] = parse_folder('res/B')
 
-    sift = cv2.xfeatures2d.SIFT_create()
-    # sift = cv2.SIFT_create()
+    # sift = cv2.xfeatures2d.SIFT_create()
+    sift = cv2.SIFT_create()
     kp_list, desc_list = compute_keypoints_and_descriptors(sift, res_queue)
 
     # init a class of Object_detect

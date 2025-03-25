@@ -8,9 +8,9 @@ import numpy as np
 from pymycobot.mycobot320 import MyCobot320
 
 # y轴偏移量
-pump_y = -55
+pump_y = -25
 # x轴偏移量
-pump_x = 15
+pump_x = 240
 
 
 class Detect_marker():
@@ -67,7 +67,11 @@ class Detect_marker():
         try:
             same_data_count = 0
             last_data = None
+            start_time = time.time()
             while True:
+                # 超时检测
+                if (time.time() - start_time) >= 3:
+                    break
                 res = self.mc.is_in_position(data, ids)
                 # print('res', res, data)
                 if data == last_data:
@@ -84,47 +88,48 @@ class Detect_marker():
             e = traceback.format_exc()
             print(e)
 
+    def calculate_j6_angle(self, qr_angle, offset):
+        """
+        根据二维码旋转角计算机械臂 J6 关节的角度。
+
+        :param qr_angle: 二维码旋转角（yaw 角），单位：度
+        :param offset: J6 关节的偏移量（二维码 0° 对应的 J6 角度）
+        :return: J6 目标角度，单位：度
+        """
+        # 计算 J6 目标角度
+        j6_angle = qr_angle + offset
+
+        # 限制 J6 角度在 [-180, 180] 范围内
+        j6_angle = (j6_angle + 180) % 360 - 180
+
+        return j6_angle
+
     # Grasping motion
     def move(self, x, y, color, yaw_degrees):
 
         print(color, yaw_degrees)
 
         angles = [
-            [0.61, 45.87, -92.37, -32.16, 89.56, 1.66],  # init to point
+            [0.61, 45.87, -92.37, -41.3, 89.56, 0],  # init to point
             [18.8, -7.91, -54.49, -23.02, 89.56, -14.76],
-            [16.96, -5.27, -52.38, -17.66, 89.82, 0.0],
+            [16.61, -6.85, -56.51, -20.21, 89.73, 14],
         ]
 
-        coords = [
-            [145.0, -65.5, 280.1, 178.99, 7.67, -179.9],  # 初始化点 init point
-            [244.5, 193.2, 330.3, -160.54, 17.35, -74.59],  # A分拣区 A sorting area
-            [33.2, 205.3, 322.5, -170.22, -13.93, 92.28],  # B分拣区  B sorting area
-            [240.3, -202.2, 317.1, -152.12, -10.15, -95.73],  # C分拣区 C sorting area
-            [30.3, -214.9, 302.3, -169.77, -8.64, -91.55],  # D分拣区 D sorting area
+        coords_to_angles = [
+            [54.58, -42.89, -11.16, -12.3, 90.61, 42.01],  # A分拣区 A sorting area
+            [103.18, 9.75, -75.32, -11.16, 96.76, -78.83],  # B分拣区  B sorting area
+            [-23.9, -33.92, -38.75, 9.66, 90.08, -20.83],  # C分拣区 C sorting area
+            [-59.15, 8.17, -81.56, 5.97, 93.86, -58.09],  # D分拣区 D sorting area
         ]
 
-        if yaw_degrees > 169:
-            yaw_degrees = 169
-        elif yaw_degrees < -169:
-            yaw_degrees = -169
-        else:
-            yaw_degrees = yaw_degrees
-
-        yaw_degrees_opt = yaw_degrees + 5
-
-        if yaw_degrees_opt > 170:
-            yaw_degrees_opt = 170
-        elif yaw_degrees_opt < -173:
-            yaw_degrees_opt = -173
-        else:
-            yaw_degrees_opt = yaw_degrees_opt
-        print('yaw_degrees_opt:', yaw_degrees_opt)
-        print('real_x, real_y:', round(coords[0][0] + x, 2), round(coords[0][1] + y, 2))
+        print('yaw_degrees:', yaw_degrees)
+        print('real_x, real_y:', round(x, 2), round(y, 2))
         # send coordinates to move mycobot
         self.mc.send_angles(angles[2], 50)
         self.check_position(angles[2], 0)
-        self.mc.send_angle(6, yaw_degrees_opt, 80)
-        time.sleep(1)
+        j6_angle = self.calculate_j6_angle(yaw_degrees, 14)
+        self.mc.send_angle(6, j6_angle, 80)
+        self.check_position([16.61, -6.85, -56.51, -20.21, 89.73, j6_angle], 0)
         self.gripper_on()
 
         time.sleep(1.5)
@@ -134,13 +139,11 @@ class Detect_marker():
                 tmp_coords = self.mc.get_coords()
             else:
                 break
-        time.sleep(0.5)
+        time.sleep(0.1)
 
-        self.mc.send_coords([coords[0][0] + x, coords[0][1] + y, 250, tmp_coords[3], tmp_coords[4], tmp_coords[5]], 100,
-                            1)
-        self.mc.send_coords([coords[0][0] + x, coords[0][1] + y, 203, tmp_coords[3], tmp_coords[4], tmp_coords[5]], 100,
-                            1)
-        self.check_position([coords[0][0] + x, coords[0][1] + y, 203, tmp_coords[3], tmp_coords[4], tmp_coords[5]], 1)
+        self.mc.send_coords([x, y, 250, tmp_coords[3], tmp_coords[4], tmp_coords[5]], 100,1)
+        self.mc.send_coords([x, y, 185, tmp_coords[3], tmp_coords[4], tmp_coords[5]], 100,1)
+        self.check_position([x, y, 185, tmp_coords[3], tmp_coords[4], tmp_coords[5]], 1, max_same_data_count=20)
 
         # close gripper
         self.gripper_off()
@@ -150,14 +153,16 @@ class Detect_marker():
                 tmp = self.mc.get_angles()
             else:
                 break
-        time.sleep(0.5)
+        time.sleep(0.1)
 
         # print(tmp)
         self.mc.send_angles([tmp[0], -0.71, -54.49, -23.02, 89.56, tmp[5]], 50)
         self.check_position([tmp[0], -0.71, -54.49, -23.02, 89.56, tmp[5]], 0)
+        self.mc.send_angle(6, 14, 80)
+        self.check_position([16.61, -6.85, -56.51, -20.21, 89.73, 14], 0)
         # 抓取后放置区域
-        self.mc.send_coords(coords[color], 100, 1)  # coords[1] 为A分拣区，coords[2] 为B分拣区, coords[3] 为C分拣区，coords[4] 为D分拣区
-        self.check_position(coords[color], 1)
+        self.mc.send_angles(coords_to_angles[color-1], 40)  # coords[1] 为A分拣区，coords[2] 为B分拣区, coords[3] 为C分拣区，coords[4] 为D分拣区
+        self.check_position(coords_to_angles[color-1], 0)
 
         # open gripper
         self.gripper_on()
@@ -179,17 +184,18 @@ class Detect_marker():
         else:
             self.cache_x = self.cache_y = 0
             # 调整吸泵吸取位置，y增大,向左移动;y减小,向右移动;x增大,前方移动;x减小,向后方移动
-            self.move(x + 100, y + 140, color, yaw_degrees)
+            self.move(round(-x, 2), round(-y, 2), color, yaw_degrees)
 
     # init mycobot
     def init_mycobot(self):
         self.mc = MyCobot320(self.robot_riscv, 115200)
-
-        self.mc.send_angles([0.61, 45.87, -92.37, -32.16, 89.56, 1.66], 50)
-        self.check_position([0.61, 45.87, -92.37, -32.16, 89.56, 1.66], 0)
+        if self.mc.get_fresh_mode() != 0:
+            self.mc.set_fresh_mode(0)
+        self.mc.send_angles([0.61, 45.87, -92.37, -41.3, 89.56, 0], 50)
+        self.check_position([0.61, 45.87, -92.37, -41.3, 89.56, 0], 0)
         # 设置夹爪为透传模式
         self.mc.set_gripper_mode(0)
-        time.sleep(0.5)
+        time.sleep(0.05)
         self.gripper_off()
 
     def run(self):
@@ -234,7 +240,7 @@ class Detect_marker():
                     (rvec - tvec).any()
                     xyz = tvec[0, 0, :]
                     # calculate the coordinates of the aruco relative to the pump
-                    xyz = [round(xyz[0] * 1000 + pump_y, 2), round(xyz[1] * 1000 + pump_x, 2), round(xyz[2] * 1000, 2)]
+                    xyz = [round(xyz[0] * 1000 - pump_y, 2), round(xyz[1] * 1000 - pump_x, 2), round(xyz[2] * 1000, 2)]
                     # 从旋转向量（rvec）计算旋转矩阵
                     rotation_matrix, _ = cv2.Rodrigues(rvec)
 
