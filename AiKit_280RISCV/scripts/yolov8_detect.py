@@ -8,7 +8,7 @@ class YOLODetection:
     def __init__(self):
         self.path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         self.model_path = self.path + "/scripts/yolov8n.q.onnx"
-        self.labels_path = self.path + "/scripts/label.txt"
+        self.labels_path = self.path + "/scripts/yolov8_label.txt"
         self.class_conf = 0.3
         self.nms_thresh = 0.45
         self.labels = [line.strip() for line in open(self.labels_path, 'r').readlines()]
