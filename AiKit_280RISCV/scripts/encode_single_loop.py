@@ -26,11 +26,7 @@ class Detect_marker():
         Device.pin_factory = LGPIOFactory(chip=0)  # 显式指定/dev/gpiochip0
 
         # 初始化 GPIO 控制的设备
-        self.pump = LED(71)  # 气泵
         self.valve = LED(72)  # 阀门
-        self.pump.on()
-        time.sleep(0.05)
-        self.valve.on()
 
         self.pub_pump(False)
 
@@ -60,10 +56,8 @@ class Detect_marker():
     # 控制吸泵
     def pub_pump(self, flag):
         if flag:
-            self.pump.on()
             self.valve.off()
         else:
-            self.pump.off()
             self.valve.on()
 
     def check_position(self, data, ids):

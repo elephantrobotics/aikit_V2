@@ -41,11 +41,7 @@ class Object_detect():
         self.robot_riscv = os.popen("ls /dev/ttyAMA*").readline()[:-1]
         Device.pin_factory = LGPIOFactory(chip=0) # 显式指定/dev/gpiochip0
         # 初始化 GPIO 控制的设备
-        self.pump = LED(71)   # 气泵
         self.valve = LED(72)  # 阀门
-        self.pump.on()
-        time.sleep(0.05)
-        self.valve.on()
 
         self.gpio_status(False)
 
@@ -85,13 +81,11 @@ class Object_detect():
         self.aruco_params = cv2.aruco.DetectorParameters_create()
 
 
-    # pump_control musepi
+    # pump_control riscv
     def gpio_status(self, flag):
         if flag:
-            self.pump.on()
             self.valve.off()
         else:
-            self.pump.off()
             self.valve.on()
 
     def check_position(self, data, ids):
