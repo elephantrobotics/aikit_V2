@@ -71,7 +71,7 @@ class Detect_marker():
             start_time = time.time()
             while True:
                 # 超时检测
-                if (time.time() - start_time) >= 3:
+                if (time.time() - start_time) >= 5:
                     break
                 res = self.mc.is_in_position(data, ids)
                 # print('res', res)
