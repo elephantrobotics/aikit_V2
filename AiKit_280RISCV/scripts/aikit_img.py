@@ -125,7 +125,7 @@ class Object_detect():
 
         # close pump
         self.gpio_status(False)
-        time.sleep(0.5)
+        time.sleep(2)
 
         self.mc.send_angles(self.move_angles[0], 50)
         self.check_position(self.move_angles[0], 0)

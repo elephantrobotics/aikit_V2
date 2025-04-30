@@ -132,7 +132,7 @@ class Detect_marker():
         
         # close pump
         self.pub_pump(False)
-        time.sleep(0.5)
+        time.sleep(2)
 
         self.mc.send_angles(angles[0], 50)
         self.check_position(angles[0], 0)
