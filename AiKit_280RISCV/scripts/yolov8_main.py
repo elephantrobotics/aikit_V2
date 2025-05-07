@@ -37,11 +37,7 @@ class Object_detect():
 
         Device.pin_factory = LGPIOFactory(chip=0)  # 显式指定/dev/gpiochip0
         # 初始化 GPIO 控制的设备
-        self.pump = LED(71)  # 气泵
         self.valve = LED(72)  # 阀门
-        self.pump.on()
-        time.sleep(0.05)
-        self.valve.on()
 
         self.gpio_status(False)
 
@@ -68,10 +64,8 @@ class Object_detect():
     # pump_control riscv
     def gpio_status(self, flag):
         if flag:
-            self.pump.on()
             self.valve.off()
         else:
-            self.pump.off()
             self.valve.on()
 
     def check_position(self, data, ids):
@@ -85,7 +79,7 @@ class Object_detect():
             start_time = time.time()
             while True:
                 # 超时检测
-                if (time.time() - start_time) >= 3:
+                if (time.time() - start_time) >= 5:
                     break
                 res = self.mc.is_in_position(data, ids)
                 # print('res', res)
@@ -125,12 +119,12 @@ class Object_detect():
                             50)  # [18.8, -7.91, -54.49, -23.02, -0.79, -14.76]
         self.check_position([tmp[0], -0.71, -74.49 - 20, -23.02, -0.79, tmp[5]], 0)
 
-        self.mc.send_angles(self.move_target_angles[color], 50)
-        self.check_position(self.move_target_angles[color], 0)
+        self.mc.send_angles(self.move_target_angles[color-1], 50)
+        self.check_position(self.move_target_angles[color-1], 0)
 
         # close pump
         self.gpio_status(False)
-        time.sleep(0.5)
+        time.sleep(2)
 
         self.mc.send_angles(self.move_angles[0], 50)
         self.check_position(self.move_angles[0], 0)

@@ -40,13 +40,9 @@ class Object_detect():
         
         self.robot_riscv = os.popen("ls /dev/ttyAMA*").readline()[:-1]
         Device.pin_factory = LGPIOFactory(chip=0) # 显式指定/dev/gpiochip0
-        # 初始化 GPIO 控制的设备
-        self.pump = LED(71)   # 气泵
+        # # 初始化 GPIO 控制的设备
         self.valve = LED(72)  # 阀门
-        self.pump.on()
-        time.sleep(0.05)
-        self.valve.on()
-
+        #
         self.gpio_status(False)
 
         # choose place to set cube 选择放置立方体的地方
@@ -85,13 +81,11 @@ class Object_detect():
         self.aruco_params = cv2.aruco.DetectorParameters_create()
 
 
-    # pump_control musepi
+    # pump_control riscv
     def gpio_status(self, flag):
         if flag:
-            self.pump.on()
             self.valve.off()
         else:
-            self.pump.off()
             self.valve.on()
 
     def check_position(self, data, ids):
@@ -105,7 +99,7 @@ class Object_detect():
             start_time = time.time()
             while True:
                 # 超时检测
-                if (time.time() - start_time) >= 3:
+                if (time.time() - start_time) >= 5:
                     break
                 res = self.mc.is_in_position(data, ids)
                 # print('res', res)
@@ -161,7 +155,7 @@ class Object_detect():
 
         # close pump
         self.gpio_status(False)
-        time.sleep(0.5)
+        time.sleep(2)
 
         self.mc.send_angles(self.move_angles[0], 50)
         self.check_position(self.move_angles[0], 0)
@@ -360,7 +354,8 @@ if __name__ == "__main__":
     # open the camera
     cap_num = 20
     cap = cv2.VideoCapture(cap_num, cv2.CAP_V4L)
- 
+    # cap = cv2.VideoCapture(1, cv2.CAP_DSHOW)
+
     if not cap.isOpened():
         cap.open()
     # init a class of Object_detect

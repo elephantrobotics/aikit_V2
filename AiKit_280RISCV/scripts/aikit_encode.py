@@ -26,12 +26,8 @@ class Detect_marker():
         Device.pin_factory = LGPIOFactory(chip=0) # 显式指定/dev/gpiochip0
         
         # 初始化 GPIO 控制的设备
-        self.pump = LED(71)   # 气泵
         self.valve = LED(72)  # 阀门
-        self.pump.on()
-        time.sleep(0.05)
-        self.valve.on()
-    
+
         self.pub_pump(False)
         
         # Creating a Camera Object
@@ -60,10 +56,8 @@ class Detect_marker():
     # 控制吸泵      
     def pub_pump(self, flag):
         if flag:
-            self.pump.on()
             self.valve.off()
         else:
-            self.pump.off()
             self.valve.on()
 
     def check_position(self, data, ids):
@@ -77,7 +71,7 @@ class Detect_marker():
             start_time = time.time()
             while True:
                 # 超时检测
-                if (time.time() - start_time) >= 3:
+                if (time.time() - start_time) >= 5:
                     break
                 res = self.mc.is_in_position(data, ids)
                 # print('res', res)
@@ -138,7 +132,7 @@ class Detect_marker():
         
         # close pump
         self.pub_pump(False)
-        time.sleep(0.5)
+        time.sleep(2)
 
         self.mc.send_angles(angles[0], 50)
         self.check_position(angles[0], 0)

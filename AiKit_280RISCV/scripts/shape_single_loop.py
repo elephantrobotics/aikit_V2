@@ -40,11 +40,7 @@ class Object_detect():
 
         Device.pin_factory = LGPIOFactory(chip=0) # 显式指定/dev/gpiochip0
         # 初始化 GPIO 控制的设备
-        self.pump = LED(71)   # 气泵
         self.valve = LED(72)  # 阀门
-        self.pump.on()
-        time.sleep(0.05)
-        self.valve.on()
 
         self.gpio_status(False)
 
@@ -71,13 +67,11 @@ class Object_detect():
         # 初始化背景减法器
         self.mog = cv2.bgsegm.createBackgroundSubtractorMOG()
 
-    # pump_control musepi
+    # pump_control riscv
     def gpio_status(self, flag):
         if flag:
-            self.pump.on()
             self.valve.off()
         else:
-            self.pump.off()
             self.valve.on()
 
     def check_position(self, data, ids):
@@ -91,7 +85,7 @@ class Object_detect():
             start_time = time.time()
             while True:
                 # 超时检测
-                if (time.time() - start_time) >= 3:
+                if (time.time() - start_time) >= 5:
                     break
                 res = self.mc.is_in_position(data, ids)
                 # print('res', res)
