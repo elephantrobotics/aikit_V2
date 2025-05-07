@@ -7,9 +7,9 @@ import time
 import os,sys
 
 from pymycobot.mycobot280 import MyCobot280
-# from gpiozero.pins.lgpio import LGPIOFactory
-# from gpiozero import Device
-# from gpiozero import LED
+from gpiozero.pins.lgpio import LGPIOFactory
+from gpiozero import Device
+from gpiozero import LED
 
 
 IS_CV_4 = cv2.__version__[0] == '4'
@@ -38,12 +38,12 @@ class Object_detect():
             [112.93, 3.16, -96.32, 0.87, 0.26, -9.75],  # B Sorting area
         ]
         
-        # self.robot_riscv = os.popen("ls /dev/ttyAMA*").readline()[:-1]
-        # Device.pin_factory = LGPIOFactory(chip=0) # 显式指定/dev/gpiochip0
+        self.robot_riscv = os.popen("ls /dev/ttyAMA*").readline()[:-1]
+        Device.pin_factory = LGPIOFactory(chip=0) # 显式指定/dev/gpiochip0
         # # 初始化 GPIO 控制的设备
-        # self.valve = LED(72)  # 阀门
+        self.valve = LED(72)  # 阀门
         #
-        # self.gpio_status(False)
+        self.gpio_status(False)
 
         # choose place to set cube 选择放置立方体的地方
         self.color = 0
@@ -170,7 +170,7 @@ class Object_detect():
         else:
             self.cache_x = self.cache_y = 0
             # 调整吸泵吸取位置，y增大,向左移动;y减小,向右移动;x增大,前方移动;x减小,向后方移动
-            # self.move(x, y - 10, color)
+            self.move(x, y - 10, color)
 
     # init mycobot280
     def run(self):
@@ -361,7 +361,7 @@ if __name__ == "__main__":
     # init a class of Object_detect
     detect = Object_detect()
     # init mycobot280
-    # detect.run()
+    detect.run()
 
     _init_ = 20  
     init_num = 0
