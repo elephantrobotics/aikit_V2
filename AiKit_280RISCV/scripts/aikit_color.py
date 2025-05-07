@@ -352,9 +352,9 @@ class Object_detect():
 if __name__ == "__main__":
 
     # open the camera
-    # cap_num = 20
-    # cap = cv2.VideoCapture(cap_num, cv2.CAP_V4L)
-    cap = cv2.VideoCapture(1, cv2.CAP_DSHOW)
+    cap_num = 20
+    cap = cv2.VideoCapture(cap_num, cv2.CAP_V4L)
+    # cap = cv2.VideoCapture(1, cv2.CAP_DSHOW)
 
     if not cap.isOpened():
         cap.open()
