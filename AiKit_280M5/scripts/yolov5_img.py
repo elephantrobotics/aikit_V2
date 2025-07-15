@@ -1,16 +1,13 @@
+import os
+import platform
+import threading
+import time
 import traceback
-from multiprocessing import Process, Pipe
+
 import cv2
 import numpy as np
-import time
-import datetime
-import threading
-import os, sys
-import matplotlib.pyplot as plt
 import serial
 import serial.tools.list_ports
-import platform
-
 from pymycobot.mycobot280 import MyCobot280
 
 IS_CV_4 = cv2.__version__[0] == '4'

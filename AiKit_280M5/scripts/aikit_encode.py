@@ -1,16 +1,13 @@
 #encoding: UTF-8
+import platform
+import time
 import traceback
 
 import cv2
 import numpy as np
-from pymycobot.mycobot280 import MyCobot280
-# import RPi.GPIO as GPIO
-import time
-import os
 import serial
 import serial.tools.list_ports
-import platform
-
+from pymycobot.mycobot280 import MyCobot280
 
 # y轴偏移量
 pump_y = -55
@@ -18,7 +15,7 @@ pump_y = -55
 pump_x = 15
 
 class Detect_marker():
-    def __init__(self):
+    def __init__(self, x_offset=216, y_offset=33):
         
         # set cache of real coord
         self.cache_x = self.cache_y = 0
@@ -57,8 +54,8 @@ class Detect_marker():
         self.dist_coeffs = np.array(([[3.41360787e-01, -2.52114260e+00, -1.28012469e-03,  6.70503562e-03,
              2.57018000e+00]]))
 
-        self.x_offset = 216
-        self.y_offset = 33
+        self.x_offset = x_offset
+        self.y_offset = y_offset
     
     # 控制吸泵      
     def pub_pump(self, flag):
@@ -113,14 +110,6 @@ class Detect_marker():
             [18.8, -7.91, -54.49, -23.02, -0.79, -14.76],
         ]
 
-        coords = [
-            [145.0, -65.5, 280.1, 178.99, 7.67, -179.9], # 初始化点 init point
-            [115.8, 177.3, 210.6, 178.06, -0.92, -6.11], # A分拣区 A sorting area
-            [-6.9, 173.2, 201.5, 179.93, 0.63, 33.83], # B分拣区  B sorting area
-            [238.8, -124.1, 204.3, -169.69, -5.52, -96.52], # C分拣区 C sorting area
-            [132.2, -136.9, 200.8, -178.24, -3.72, -107.17],  # D分拣区 D sorting area   
-            
-        ]
         new_move_coords_to_angles = [
             [-39.99, -10.28, -84.99, 4.83, 0.08, -7.99],  # D Sorting area
             [-22.93, -52.82, -26.45, -5.53, 0.08, -7.91],  # C Sorting area

@@ -1,12 +1,13 @@
+import os
+import sys
+import time
 import traceback
 from multiprocessing import Process, Pipe
+
 import cv2
 import numpy as np
-import time
-import os, sys
 import serial
 import serial.tools.list_ports
-
 from pymycobot.mycobot280 import MyCobot280
 
 IS_CV_4 = cv2.__version__[0] == '4'
@@ -106,7 +107,6 @@ class Object_detect():
 
     # Grasping motion
     def move(self, x, y, color):
-        # send Angle to move mypal260
         self.mc.send_angles(self.move_angles[1], 50)
         self.check_position(self.move_angles[1], 0)
 
@@ -406,8 +406,8 @@ def process_display_frame(connection):
     import platform
     if platform.system() == "Windows":
         cap_num = 1
-        cap = cv2.VideoCapture(cap_num, cv2.CAP_V4L)
-        # cap = cv2.VideoCapture(cap_num, cv2.CAP_DSHOW)
+        # cap = cv2.VideoCapture(cap_num, cv2.CAP_V4L)
+        cap = cv2.VideoCapture(cap_num, cv2.CAP_DSHOW)
         if not cap.isOpened():
             cap.open(1)
     elif platform.system() == "Linux":

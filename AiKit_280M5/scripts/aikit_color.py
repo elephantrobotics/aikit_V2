@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
+import sys
+import time
 import traceback
 
 import cv2
 import numpy as np
-import time
-import os, sys
 import serial
 import serial.tools.list_ports
-
 from pymycobot.mycobot280 import MyCobot280
 
 IS_CV_4 = cv2.__version__[0] == '4'
