@@ -1,13 +1,12 @@
+import os
+import platform
+import threading
+import time
 import traceback
-from multiprocessing import Process, Pipe
+
+import RPi.GPIO as GPIO
 import cv2
 import numpy as np
-import time
-import datetime
-import threading
-import os, sys
-import matplotlib.pyplot as plt
-
 from pymycobot.mycobot280 import MyCobot280
 
 IS_CV_4 = cv2.__version__[0] == '4'
@@ -15,14 +14,14 @@ __version__ = "1.0"  # Adaptive seeed
 
 
 class Object_detect():
-    global move_finsh
 
-    def __init__(self, camera_x=150, camera_y=10):
+    def __init__(self, camera_x=180, camera_y=10):
         # inherit the parent class
         super(Object_detect, self).__init__()
 
-        # declare mycobot 280pi
+        # declare mycobot 280
         self.mc = None
+
         # 移动角度
         self.move_angles = [
             [0.61, 45.87, -92.37, -41.3, 2.02, 9.58],  # init the point
@@ -30,39 +29,12 @@ class Object_detect():
         ]
 
         # 移动坐标
-        self.move_coords = [
-            [132.2, -136.9, 200.8, -178.24, -3.72, -107.17],  # D Sorting area
-            [238.8, -124.1, 204.3, -169.69, -5.52, -96.52],  # C Sorting area
-            [115.8, 177.3, 210.6, 178.06, -0.92, -6.11],  # A Sorting area
-            [-6.9, 173.2, 201.5, 179.93, 0.63, 33.83],  # B Sorting area
+        self.new_move_coords_to_angles = [
+            [-39.99, -10.28, -84.99, 4.83, 0.08, -7.99],  # D Sorting area
+            [-22.93, -52.82, -26.45, -5.53, 0.08, -7.91],  # C Sorting area
+            [49.13, -53.61, -27.15, -6.41, 0.08, -7.73],  # A Sorting area
+            [73.38, 0.35, -90.26, 7.2, 0.08, -9.75],  # B Sorting area
         ]
-
-        # which robot: USB* is m5; ACM* is wio; AMA* is raspi
-        self.robot_m5 = os.popen("ls /dev/ttyUSB*").readline()[:-1]
-        self.robot_wio = os.popen("ls /dev/ttyACM*").readline()[:-1]
-        self.robot_raspi = os.popen("ls /dev/ttyAMA*").readline()[:-1]
-        self.robot_jes = os.popen("ls /dev/ttyTHS1").readline()[:-1]
-        self.raspi = False
-        if "dev" in self.robot_m5:
-            self.Pin = [2, 5]
-        elif "dev" in self.robot_wio:
-            # self.Pin = [20, 21]
-            self.Pin = [2, 5]
-
-            # for i in self.move_coords:
-            #     i[2] -= 20
-        elif "dev" in self.robot_raspi or "dev" in self.robot_jes:
-            import RPi.GPIO as GPIO
-            GPIO.setwarnings(False)
-            self.GPIO = GPIO
-            GPIO.setmode(GPIO.BCM)
-            GPIO.setup(20, GPIO.OUT)
-            GPIO.setup(21, GPIO.OUT)
-            GPIO.output(20, 1)
-            GPIO.output(21, 1)
-            self.raspi = True
-        if self.raspi:
-            self.gpio_status(False)
 
         # choose place to set cube
         self.color = 0
@@ -116,33 +88,27 @@ class Object_detect():
         with open(classesFile, 'rt') as f:
             self.classes = f.read().rstrip('\n').split('\n')
 
-        self.change_flag = False
+        GPIO.setwarnings(False)
+        GPIO.setmode(GPIO.BCM)
+        GPIO.setup(20, GPIO.OUT)
+        GPIO.setup(21, GPIO.OUT)
 
-        # pump_control pi
-
-    def gpio_status(self, flag):
-        if flag:
-            self.GPIO.output(20, 0)
-            self.GPIO.output(21, 0)
-        else:
-            self.GPIO.output(20, 1)
-            self.GPIO.output(21, 1)
-
-    # 开启吸泵 m5
+    # 开启吸泵
     def pump_on(self):
-        # 让2号位工作
-        self.mc.set_basic_output(2, 0)
-        # 让5号位工作
-        self.mc.set_basic_output(5, 0)
+        GPIO.output(20, 0)
+        time.sleep(0.05)
 
-    # 停止吸泵 m5
+    # 停止吸泵
     def pump_off(self):
-        # 让2号位停止工作
-        self.mc.set_basic_output(2, 1)
-        # 让5号位停止工作
-        self.mc.set_basic_output(5, 1)
+        GPIO.output(20, 1)
+        time.sleep(0.05)
+        # 打开泄气阀门
+        GPIO.output(21, 0)
+        time.sleep(1)
+        GPIO.output(21, 1)
+        time.sleep(0.05)
 
-    def check_position(self, data, ids):
+    def check_position(self, data, ids, max_same_data_count=50):
         """
         循环检测是否到位某个位置
         :param data: 角度或者坐标
@@ -150,11 +116,23 @@ class Object_detect():
         :return:
         """
         try:
+            same_data_count = 0
+            last_data = None
+            start_time = time.time()
             while True:
+                # 超时检测
+                if (time.time() - start_time) >= 5:
+                    break
                 res = self.mc.is_in_position(data, ids)
-                # print('res', res)
-                if res == 1:
-                    time.sleep(0.1)
+                # print('res', res, data)
+                if data == last_data:
+                    same_data_count += 1
+                else:
+                    same_data_count = 0
+
+                last_data = data
+                # print('count:', same_data_count)
+                if res == 1 or same_data_count >= max_same_data_count:
                     break
                 time.sleep(0.1)
         except Exception as e:
@@ -164,24 +142,18 @@ class Object_detect():
     # Grasping motion
     def move(self, x, y, color):
         print(color)
-        # send Angle to move mypal260
-        self.mc.send_angles(self.move_angles[1], 25)
+        # send Angle to move mycobot 280
+        self.mc.send_angles(self.move_angles[1], 50)
         self.check_position(self.move_angles[1], 0)
 
         # send coordinates to move mycobot
-        self.mc.send_coords([x, y, 170.6, 179.87, -3.78, -62.75], 40, 1)  # usb :rx,ry,rz -173.3, -5.48, -57.9
-        # self.mc.send_coords([x, y, 150, 179.87, -3.78, -62.75], 25, 0)
-        # time.sleep(3)
-
-        self.mc.send_coords([x, y, 65, 179.87, -3.78, -62.75], 40, 1)
+        self.mc.send_coords([x, y, 170.6, 179.87, -3.78, -62.75], 70, 1)  # usb :rx,ry,rz -173.3, -5.48, -57.9
+        self.mc.send_coords([x, y, 124, 179.87, -3.78, -62.75], 70, 1)
         data = [x, y, 65, 179.87, -3.78, -62.75]
         self.check_position(data, 1)
 
         # open pump
-        if "dev" in self.robot_m5 or "dev" in self.robot_wio:
-            self.pump_on()
-        elif "dev" in self.robot_raspi or "dev" in self.robot_jes:
-            self.gpio_status(True)
+        self.pump_on()
         time.sleep(1.5)
 
         tmp = []
@@ -194,20 +166,17 @@ class Object_detect():
 
         # print(tmp)
         self.mc.send_angles([tmp[0], -0.71, -54.49, -23.02, -0.79, tmp[5]],
-                            25)  # [18.8, -7.91, -54.49, -23.02, -0.79, -14.76]
+                            50)  # [18.8, -7.91, -54.49, -23.02, -0.79, -14.76]
         self.check_position([tmp[0], -0.71, -54.49, -23.02, -0.79, tmp[5]], 0)
 
-        self.mc.send_coords(self.move_coords[color], 40, 1)
-        self.check_position(self.move_coords[color], 1)
+        self.mc.send_angles(self.new_move_coords_to_angles[color], 50)
+        self.check_position(self.new_move_coords_to_angles[color], 0)
 
         # close pump
-        if "dev" in self.robot_m5 or "dev" in self.robot_wio:
-            self.pump_off()
-        elif "dev" in self.robot_raspi or "dev" in self.robot_jes:
-            self.gpio_status(False)
+        self.pump_off()
         time.sleep(0.5)
 
-        self.mc.send_angles(self.move_angles[0], 25)
+        self.mc.send_angles(self.move_angles[0], 50)
         self.check_position(self.move_angles[0], 0)
         print('请按空格键打开摄像头进行下一次图像存储和识别')
         print('Please press the space bar to open the camera for the next image storage and recognition')
@@ -227,15 +196,11 @@ class Object_detect():
 
     # init mycobot
     def run(self):
-
-        if "dev" in self.robot_wio:
-            self.mc = MyCobot280(self.robot_wio, 115200)
-        elif "dev" in self.robot_m5:
-            self.mc = MyCobot280(self.robot_m5, 115200)
-        elif "dev" in self.robot_raspi:
-            self.mc = MyCobot280(self.robot_raspi, 1000000)
-        self.gpio_status(False)
-        self.mc.send_angles([0.61, 45.87, -92.37, -41.3, 2.02, 9.58], 20)
+        self.mc = MyCobot280('/dev/ttyAMA0', 1000000)
+        if self.mc.get_fresh_mode() != 0:
+            self.mc.set_fresh_mode(0)
+        self.pump_off()
+        self.mc.send_angles([0.61, 45.87, -92.37, -41.3, 2.02, 9.58], 50)
         self.check_position([0.61, 45.87, -92.37, -41.3, 2.02, 9.58], 0)
 
     # draw aruco
@@ -306,7 +271,7 @@ class Object_detect():
     def set_params(self, c_x, c_y, ratio):
         self.c_x = c_x
         self.c_y = c_y
-        self.ratio = 220.0 / ratio
+        self.ratio = 235.0 / ratio
 
     # calculate the coords between cube and mycobot
     def get_position(self, x, y):
@@ -426,7 +391,7 @@ class Object_detect():
 
                             cv2.circle(input_image, (cx, cy), 5, self.BLUE, 10)
 
-                            # 检测到的类别                      
+                            # 检测到的类别
                             label = "{}:{:.2f}".format(self.classes[class_ids[i]], confidences[i])
                             # 绘制类real_sx, real_sy, detect.color)
 
@@ -447,13 +412,6 @@ class Object_detect():
 status = True
 
 
-def camera_status():
-    global status
-    status = True
-    cap_num = 0
-    cap = cv2.VideoCapture(cap_num)
-
-
 def runs():
     global status
 
@@ -461,19 +419,25 @@ def runs():
 
     # init mycobot
     detect.run()
-
-    _init_ = 20  # 
+    _init_ = 20  #
     init_num = 0
     nparams = 0
     num = 0
     real_sx = real_sy = 0
+    cap_mode = None
 
     # yolov5 img path
     path_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     path_img = path_dir + '/res/yolov5_detect.png'
     # open the camera
-    cap_num = 0
-    cap = cv2.VideoCapture(cap_num)
+    if platform.system() == "Windows":
+        cap_num = 1
+        cap_mode = cv2.CAP_DSHOW
+    elif platform.system() == "Linux":
+        cap_num = 0
+        cap_mode = cv2.CAP_V4L
+    cap = cv2.VideoCapture(cap_num, cap_mode)
+
     print("*  热键(请在摄像头的窗口使用):                   *")
     print("*  hotkey(please use it in the camera window): *")
     print("*  z: 拍摄图片(take picture)                    *")
@@ -481,7 +445,7 @@ def runs():
 
     while cv2.waitKey(1) < 0:
         if not status:
-            cap = cv2.VideoCapture(cap_num)
+            cap = cv2.VideoCapture(cap_num, cap_mode)
             status = True
             print("请将可识别物体放置摄像头窗口进行拍摄")
             print("Please place an identifiable object in the camera window for shooting")
