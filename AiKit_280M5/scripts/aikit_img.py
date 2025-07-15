@@ -15,7 +15,7 @@ __version__ = "1.0"  # Adaptive seeed
 
 class Object_detect():
 
-    def __init__(self, camera_x=160, camera_y=10):
+    def __init__(self, camera_x=187, camera_y=12):
         # inherit the parent class
         super(Object_detect, self).__init__()
 
@@ -30,12 +30,11 @@ class Object_detect():
             [18.8, -7.91, -54.49, -23.02, -0.79, -14.76],  # point to grab
         ]
 
-        # 移动坐标
-        self.move_coords = [
-            [132.2, -136.9, 200.8, -178.24, -3.72, -107.17],  # D Sorting area
-            [238.8, -124.1, 204.3, -169.69, -5.52, -96.52],  # C Sorting area
-            [115.8, 177.3, 210.6, 178.06, -0.92, -6.11],  # A Sorting area
-            [-6.9, 173.2, 201.5, 179.93, 0.63, 33.83],  # B Sorting area
+        self.new_move_coords_to_angles = [
+            [-39.99, -10.28, -84.99, 4.83, 0.08, -7.99],  # D Sorting area
+            [-22.93, -52.82, -26.45, -5.53, 0.08, -7.91],  # C Sorting area
+            [49.13, -53.61, -27.15, -6.41, 0.08, -7.73],  # A Sorting area
+            [73.38, 0.35, -90.26, 7.2, 0.08, -9.75],  # B Sorting area
         ]
 
         # choose place to set cube
@@ -60,19 +59,21 @@ class Object_detect():
 
     # 开启吸泵 m5
     def pump_on(self):
-        # 让2号位工作
-        self.mc.set_basic_output(2, 0)
         # 让5号位工作
         self.mc.set_basic_output(5, 0)
+        time.sleep(0.05)
 
     # 停止吸泵 m5
     def pump_off(self):
-        # 让2号位停止工作
-        self.mc.set_basic_output(2, 1)
         # 让5号位停止工作
         self.mc.set_basic_output(5, 1)
+        time.sleep(0.05)
+        self.mc.set_basic_output(2, 0)
+        time.sleep(0.05)
+        self.mc.set_basic_output(2, 1)
+        time.sleep(0.05)
 
-    def check_position(self, data, ids):
+    def check_position(self, data, ids, max_same_data_count=50):
         """
         循环检测是否到位某个位置
         :param data: 角度或者坐标
@@ -80,11 +81,23 @@ class Object_detect():
         :return:
         """
         try:
+            same_data_count = 0
+            last_data = None
+            start_time = time.time()
             while True:
+                # 超时检测
+                if (time.time() - start_time) >= 5:
+                    break
                 res = self.mc.is_in_position(data, ids)
-                # print('res', res)
-                if res == 1:
-                    time.sleep(0.1)
+                # print('res', res, data)
+                if data == last_data:
+                    same_data_count += 1
+                else:
+                    same_data_count = 0
+
+                last_data = data
+                # print('count:', same_data_count)
+                if res == 1 or same_data_count >= max_same_data_count:
                     break
                 time.sleep(0.1)
         except Exception as e:
@@ -94,18 +107,12 @@ class Object_detect():
     # Grasping motion
     def move(self, x, y, color):
         # send Angle to move mypal260
-        self.mc.send_angles(self.move_angles[1], 25)
+        self.mc.send_angles(self.move_angles[1], 50)
         self.check_position(self.move_angles[1], 0)
 
         # send coordinates to move mycobot
-        self.mc.send_coords([x, y, 170.6, 179.87, -3.78, -62.75], 40, 1)  # usb :rx,ry,rz -173.3, -5.48, -57.9
-
-        # self.mc.send_coords([x, y, 150, 179.87, -3.78, -62.75], 25, 0)
-        # time.sleep(3)
-
-        self.mc.send_coords([x, y, 65, 179.87, -3.78, -62.75], 40, 1)
-        # self.mc.send_coords([x, y, 103, 179.87, -3.78, -62.75], 25, 0)
-
+        self.mc.send_coords([x, y, 170.6, 179.87, -3.78, -62.75], 70, 1)
+        self.mc.send_coords([x, y, 124, 179.87, -3.78, -62.75], 70, 1)
         data = [x, y, 65, 179.87, -3.78, -62.75]
         self.check_position(data, 1)
 
@@ -123,17 +130,17 @@ class Object_detect():
 
         # print(tmp)
         self.mc.send_angles([tmp[0], -0.71, -54.49, -23.02, -0.79, tmp[5]],
-                            25)  # [18.8, -7.91, -54.49, -23.02, -0.79, -14.76]
+                            50)
         self.check_position([tmp[0], -0.71, -54.49, -23.02, -0.79, tmp[5]], 0)
 
-        self.mc.send_coords(self.move_coords[color], 40, 1)
-        self.check_position(self.move_coords[color], 1)
+        self.mc.send_angles(self.new_move_coords_to_angles[color], 50)
+        self.check_position(self.new_move_coords_to_angles[color], 0)
 
         # close pump
         self.pump_off()
         time.sleep(0.5)
 
-        self.mc.send_angles(self.move_angles[0], 25)
+        self.mc.send_angles(self.move_angles[0], 50)
         self.check_position(self.move_angles[0], 0)
 
     # decide whether grab cube
@@ -152,7 +159,10 @@ class Object_detect():
     # init mycobot
     def run(self):
         self.mc = MyCobot280(self.plist[0], 115200)
-        self.mc.send_angles([0.61, 45.87, -92.37, -41.3, 2.02, 9.58], 20)
+        if self.mc.get_fresh_mode() != 0:
+            self.mc.set_fresh_mode(0)
+        self.pump_off()
+        self.mc.send_angles([0.61, 45.87, -92.37, -41.3, 2.02, 9.58], 50)
         self.check_position([0.61, 45.87, -92.37, -41.3, 2.02, 9.58], 0)
 
     # draw aruco
@@ -222,7 +232,7 @@ class Object_detect():
     def set_params(self, c_x, c_y, ratio):
         self.c_x = c_x
         self.c_y = c_y
-        self.ratio = 220.0 / ratio
+        self.ratio = 235.0 / ratio
 
     # calculate the coords between cube and mycobot
     def get_position(self, x, y):
@@ -266,14 +276,6 @@ class Object_detect():
         # des = []
         kp = kp_list
         des = desc_list
-
-        # for i in goal:
-        #     kp0, des0 = sift.detectAndCompute(i, None)
-        #     kp.append(kp0)
-        #     des.append(des0)
-
-        # kp1, des1 = sift.detectAndCompute(goal, None)
-        # kp2, des2 = sift.detectAndCompute(img, None)
         kp2, des2 = kp_img, desc_img
 
         # FLANN parameters
@@ -338,16 +340,6 @@ class Object_detect():
 # The path to save the image folder
 def parse_folder(folder):
     restore = []
-    # path = ''
-    # path1 = '/home/er/aikit_V2/AiKit_280PI/' + folder
-    # path2 = r'D:/BaiduSyncdisk/PythonProject/OpenCV/' + folder
-
-    # if os.path.exists(path1):
-    #     path = path1
-    # elif os.path.exists(path2):
-    #     path = path2
-
-    # path1 = os.path.split(os.path.abspath(os.path.dirname(__file__)))
     path1 = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
     path = path1 + '/' + folder
@@ -399,7 +391,7 @@ def process_transform_frame(frame, x1, y1, x2, y2):
                        interpolation=cv2.INTER_CUBIC)
     if x1 != x2:
         # the cutting ratio here is adjusted according to the actual situation
-        frame = frame[int(y2 * 0.7):int(y1 * 1.15),
+        frame = frame[int(y2 * 0.66):int(y1 * 1.15),
                 int(x1 * 0.7):int(x2 * 1.15)]
     return frame
 
