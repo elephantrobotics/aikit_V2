@@ -1,7 +1,8 @@
 # coding:utf-8
-from fileinput import filename
-import os, cv2, sys
+import cv2
+import os
 import platform
+import sys
 
 
 def take_photo():
@@ -28,9 +29,13 @@ def take_photo():
     # camera object
     if platform.system() == "Windows":
         cap_num = 1
+        cap_mode = cv2.CAP_DSHOW
     elif platform.system() == "Linux":
         cap_num = 0
-    cap = cv2.VideoCapture(cap_num)
+        cap_mode = cv2.CAP_V4L
+    cap = cv2.VideoCapture(cap_num, cap_mode)
+    cap.set(3, 640)
+    cap.set(4, 480)
 
     while True:
         # 读入每一帧
@@ -58,20 +63,6 @@ def take_photo():
 
 def cut_photo():
     
-    # path1 = '/home/er/aikit_V2/AiKit_270Pi'    # pi
-    # path2 = r'D:/BaiduSyncdisk/PythonProject/OpenCV'         # m5
-
-    # if os.path.exists(path1):
-    #     path = path1
-    # elif os.path.exists(path2):
-    #     path = path2
-    # else:
-    #     print("invalid file path! Please check whether the file path exists or modify it!")
-
-    # path1 = os.path.split(os.path.abspath(os.path.dirname(__file__)))
-
-    # path = path1[0]
-    
     path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
     path_red = path + '/res/A'
@@ -90,17 +81,10 @@ def cut_photo():
     for i, j, k in os.walk(path_blue):
         file_len_blue = len(k)
     print("请截取要识别的部分(Please intercept the part to be identified)")
-    # root = tk.Tk()
-    # root.withdraw()
-    # temp1=filedialog.askopenfilename(parent=root)   #rgb
-    # temp2=Image.open(temp1,mode='r')
-    # temp2= cv.cvtColor(np.asarray(temp2),cv.COLOR_RGB2BGR)
-    # cut = np.array(temp2)
 
     cut = cv2.imread(r"res/takephoto.jpeg")
 
     cv2.imshow('original', cut)
-    # C:\Users\Elephant\Desktop\pymycobot+opencv\local_photo/takephoto.jpeg
 
     # 选择ROI
     roi = cv2.selectROI(windowName="original",

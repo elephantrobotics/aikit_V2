@@ -1,7 +1,7 @@
 from pymycobot.mecharm270 import MechArm270
 from time import sleep
 
-mc = MechArm270('/dev/ttyAMA0',1000000)
+mc = MechArm270('COM5',115200)
 
 a = mc.get_coords()
 print(a)
