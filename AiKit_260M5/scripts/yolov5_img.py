@@ -1,15 +1,13 @@
-from multiprocessing import Process, Pipe
+import os
+import platform
+import random
+import threading
+import time
+
 import cv2
 import numpy as np
-import time
-import datetime
-import threading
-import os,sys
-import matplotlib.pyplot as plt
 import serial
-import serial.tools.list_ports 
-import platform
-
+import serial.tools.list_ports
 from pymycobot.mypalletizer260 import MyPalletizer260
 
 IS_CV_4 = cv2.__version__[0] == '4'
@@ -18,7 +16,7 @@ __version__ = "1.0"  # Adaptive seeed
 
 class Object_detect():
 
-    def __init__(self, camera_x = 165, camera_y = 10):
+    def __init__(self, camera_x = 178, camera_y = 12):
         # inherit the parent class
         super(Object_detect, self).__init__()
 
@@ -33,17 +31,15 @@ class Object_detect():
         
         # 移动角度
         self.move_angles = [
-            [0, 0, 0, 0],  # init the point
-            [-29.0, 5.88, -4.92, -76.28],  # point to grab
-            [17.4, -10.1, -87.27, 5.8, -2.02, 15],  # point to grab
+            [-30.0, 0, 0, 7.28],  # point to grab
+            [0, 0, 0, 0],  # point to grab
         ]
 
-        # 移动坐标
-        self.move_coords = [
-            [132.6, -155.6, 211.8, -20.9],  # D Sorting area
-            [232.5, -134.1, 197.7, -45.26], # C Sorting area
-            [111.6, 159, 221.5, -120], # A Sorting area
-            [-15.9, 164.6, 217.5, -119.35], # B Sorting area  
+        self.new_move_coords_to_angles = [
+            [-55.54, 17.84, 4.39, -76.28],  # D Sorting area
+            [-31.11, 53.61, -44.64, -70.57],  # C Sorting area
+            [36.82, 51.15, -40.34, -64.68],  # A Sorting area
+            [57.48, 23.46, 1.23, -64.68],  # B Sorting area
         ]
    
         # choose place to set cube
@@ -102,51 +98,53 @@ class Object_detect():
 
     # 开启吸泵 m5
     def pump_on(self):
-        # 让2号位工作
-        self.mc.set_basic_output(2, 0)
         # 让5号位工作
         self.mc.set_basic_output(5, 0)
+        time.sleep(0.05)
 
     # 停止吸泵 m5
     def pump_off(self):
-        # 让2号位停止工作
-        self.mc.set_basic_output(2, 1)
+
         # 让5号位停止工作
         self.mc.set_basic_output(5, 1)
+        time.sleep(0.05)
+        self.mc.set_basic_output(2, 0)
+        time.sleep(0.05)
+        self.mc.set_basic_output(2, 1)
+        time.sleep(0.05)
 
     # Grasping motion
     def move(self, x, y, color):
+        color = random.randint(0, 3)
+        # send Angle to move mypal260
         print(color)
-        # send Angle to move mycobot 280
-        self.mc.send_angles(self.move_angles[0], 20)
+        self.mc.send_angles(self.move_angles[1], 40)
         time.sleep(3)
 
-        # send coordinates to move mypal260 根据不同底板机械臂，调整吸泵高度
-        self.mc.send_coords([x, y, 100, 0], 40, 1)
+        # send coordinates to move mypal260
+        self.mc.send_coords([x, y, 160, 0], 60)
         time.sleep(1.5)
-        self.mc.send_coords([x, y, 63, 0], 40, 1)
+        self.mc.send_coords([x, y, 103, 0], 60)
         time.sleep(1.5)
 
         # open pump
         self.pump_on()
-        time.sleep(1.5)
+        time.sleep(1)
 
         self.mc.send_angle(2, 0, 20)
         time.sleep(0.3)
-        self.mc.send_angle(3, -18, 20)
+        self.mc.send_angle(3, 0, 20)
         time.sleep(2)
 
-        self.mc.send_coords(self.move_coords[color], 40, 1)
-        time.sleep(3)
+        self.mc.send_angles(self.new_move_coords_to_angles[color], 20)
+        time.sleep(4)
 
         # close pump
         self.pump_off()
-        time.sleep(6)
+        time.sleep(2)
 
-        self.mc.send_angles(self.move_angles[1], 20)
-        time.sleep(1.5)
-        self.mc.send_angles([-30, 0, 0, 0], 20)
-        time.sleep(1.5)
+        self.mc.send_angles(self.move_angles[0], 40)
+        time.sleep(3)
         print('请按空格键打开摄像头进行下一次图像存储和识别')
         print('Please press the space bar to open the camera for the next image storage and recognition')
 
@@ -161,13 +159,14 @@ class Object_detect():
         self.cache_x = self.cache_y = 0
         # 调整吸泵吸取位置，y增大,向左移动;y减小,向右移动;x增大,前方移动;x减小,向后方移动
    
-        self.move(x, y, color)
+        self.move(round(x, 2), round(y, 2), color)
       
 
     # init mycobot
     def run(self):
         self.mc = MyPalletizer260(self.plist[0], 115200)
-        self.mc.send_angles([-29.0, 5.88, -4.92, -76.28], 20)
+        self.pump_off()
+        self.mc.send_angles(self.move_angles[0], 40)
         time.sleep(3)
 
 
@@ -239,7 +238,7 @@ class Object_detect():
     def set_params(self, c_x, c_y, ratio):
         self.c_x = c_x
         self.c_y = c_y
-        self.ratio = 220.0 / ratio
+        self.ratio = 235.0 / ratio
 
     # calculate the coords between cube and mycobot
     def get_position(self, x, y):
@@ -374,14 +373,7 @@ class Object_detect():
 
 
 status = True
-def camera_status():
-    global status
-    status = True
-    cap_num = 0
-    cap = cv2.VideoCapture(cap_num)
-    
-    
-    
+
 def runs():
     global status
 
@@ -401,9 +393,11 @@ def runs():
     # open the camera
     if platform.system() == "Windows":
         cap_num = 1
+        cap_mode = cv2.CAP_DSHOW
     elif platform.system() == "Linux":
         cap_num = 0
-    cap = cv2.VideoCapture(cap_num)
+        cap_mode = cv2.CAP_V4L
+    cap = cv2.VideoCapture(cap_num, cap_mode)
         
     print("*  热键(请在摄像头的窗口使用):                   *")
     print("*  hotkey(please use it in the camera window): *")
@@ -412,7 +406,7 @@ def runs():
 
     while cv2.waitKey(1)<0:
         if not status:
-            cap = cv2.VideoCapture(cap_num)
+            cap = cv2.VideoCapture(cap_num, cap_mode)
             status = True
             print("请将可识别物体放置摄像头窗口进行拍摄")
             print("Please place an identifiable object in the camera window for shooting")

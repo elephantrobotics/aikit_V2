@@ -2,5 +2,7 @@
 <project version="4">
   <component name="VcsDirectoryMappings">
     <mapping directory="$PROJECT_DIR$" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/../../BaiduSyncdisk/PythonProject/PyQt6/hkust/hkust_drawing_robot" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/../../BaiduSyncdisk/PythonProject/PyQt6/hkust_drawing_robot" vcs="Git" />
   </component>
 </project>

@@ -1,7 +1,9 @@
 # coding:utf-8
-from fileinput import filename
-import os, cv2, sys
+import os
 import platform
+import sys
+
+import cv2
 
 
 def take_photo():
@@ -24,12 +26,17 @@ def take_photo():
 
     # 设置特定值
     index = 'takephoto'
-    
+
+    # camera object
     if platform.system() == "Windows":
         cap_num = 1
+        cap_mode = cv2.CAP_DSHOW
     elif platform.system() == "Linux":
         cap_num = 0
-    cap = cv2.VideoCapture(cap_num)
+        cap_mode = cv2.CAP_V4L
+    cap = cv2.VideoCapture(cap_num, cap_mode)
+    cap.set(3, 640)
+    cap.set(4, 480)
 
     while True:
         # 读入每一帧
@@ -48,7 +55,6 @@ def take_photo():
 
         # 退出
         if input == ord('q'):
-
             # 关闭窗口
             cap.release()
             cv2.destroyAllWindows()
@@ -56,16 +62,7 @@ def take_photo():
 
 
 def cut_photo():
-    
-    path1 = '/home/ubuntu/catkin_ws/src/mycobot_ros/mycobot_ai/ai_mypalletizer_260/'    # pi
-    path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))         # m5
-    # if os.path.exists(path1):
-    #     path = path1
-    # elif os.path.exists(path2):
-    #     path = path2
-    # else:
-    #     print("invalid file path! Please check whether the file path exists or modify it!")
-
+    path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
     path_red = path + '/res/A'
     for i, j, k in os.walk(path_red):
@@ -82,18 +79,11 @@ def cut_photo():
     path_blue = path + '/res/D'
     for i, j, k in os.walk(path_blue):
         file_len_blue = len(k)
-    print("请截取要识别的部分")
-    # root = tk.Tk()
-    # root.withdraw()
-    # temp1=filedialog.askopenfilename(parent=root)   #rgb
-    # temp2=Image.open(temp1,mode='r')
-    # temp2= cv.cvtColor(np.asarray(temp2),cv.COLOR_RGB2BGR)
-    # cut = np.array(temp2)
+    print("请截取要识别的部分(Please intercept the part to be identified)")
 
     cut = cv2.imread(r"res/takephoto.jpeg")
 
     cv2.imshow('original', cut)
-    # C:\Users\Elephant\Desktop\pymycobot+opencv\local_photo/takephoto.jpeg
 
     # 选择ROI
     roi = cv2.selectROI(windowName="original",
@@ -116,24 +106,24 @@ def cut_photo():
 
     # 显示ROI并保存图片
     if roi != (0, 0, 0, 0):
-        
+
         crop = cut[y:y + h, x:x + w]
         # cv2.imshow('crop', crop)
-        # 选择D区文件夹
+        # 选择红桶文件夹
         if kw == 1:
-            cv2.imwrite(path + '/res/A/goal{}.jpeg'.format(str(file_len_red + 1)),crop)
+            cv2.imwrite(path + '/res/A/goal{}.jpeg'.format(str(file_len_red + 1)), crop)
             print('Saved')
-        # 选择B区文件夹
+        # 选择灰桶文件夹
         elif kw == 2:
-            cv2.imwrite(path + '/res/B/goal{}.jpeg'.format(str(file_len_gray+1)),crop)
+            cv2.imwrite(path + '/res/B/goal{}.jpeg'.format(str(file_len_gray + 1)), crop)
             print('Saved')
-        # 选择C区文件夹
+        # 选择绿桶文件夹
         elif kw == 3:
-            cv2.imwrite(path + '/res/C/goal{}.jpeg'.format(str(file_len_green+1)),crop)
+            cv2.imwrite(path + '/res/C/goal{}.jpeg'.format(str(file_len_green + 1)), crop)
             print('Saved')
-        # 选择A区文件夹
+        # 选择蓝桶文件夹
         elif kw == 4:
-            cv2.imwrite(path + '/res/D/goal{}.jpeg'.format(str(file_len_blue+1)),crop)
+            cv2.imwrite(path + '/res/D/goal{}.jpeg'.format(str(file_len_blue + 1)), crop)
             print('Saved')
 
     # 退出

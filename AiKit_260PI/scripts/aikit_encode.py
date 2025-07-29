@@ -1,68 +1,42 @@
-import cv2 as cv
+import platform
+import time
+
+import RPi.GPIO as GPIO
+import cv2
 import numpy as np
 from pymycobot.mypalletizer260 import MyPalletizer260
-import time
-import platform
-import os
-
 
 # y轴偏移量
 pump_y = -45
 # x轴偏移量
 pump_x = -30
 
+
 class Detect_marker():
-    def __init__(self):
-        
-        #initialize MyCobot
+    def __init__(self, x_offset=200, y_offset=32):
+
         self.mc = None
         # set cache of real coord
         self.cache_x = self.cache_y = 0
-        
-        # which robot: USB* is m5; ACM* is wio; AMA* is raspi
-        self.robot_m5 = os.popen("ls /dev/ttyUSB*").readline()[:-1]
-        self.robot_wio = os.popen("ls /dev/ttyACM*").readline()[:-1]
-        self.robot_raspi = os.popen("ls /dev/ttyAMA*").readline()[:-1]
-        self.robot_jes = os.popen("ls /dev/ttyTHS1").readline()[:-1]
-        self.raspi = False
-        
-        if "dev" in self.robot_m5:
-            self.Pin = [2, 5]
-        elif "dev" in self.robot_wio:
-            # self.Pin = [20, 21]
-            self.Pin = [2, 5]
-
-            # for i in self.move_coords:
-            #     i[2] -= 20
-        elif "dev" in self.robot_raspi or "dev" in self.robot_jes:
-            import RPi.GPIO as GPIO
-            GPIO.setwarnings(False)
-            self.GPIO = GPIO
-            GPIO.setmode(GPIO.BCM)
-            GPIO.setup(20, GPIO.OUT)
-            GPIO.setup(21, GPIO.OUT)
-            GPIO.output(20, 1)
-            GPIO.output(21, 1)
-            self.raspi = True
-        if self.raspi:
-            self.pub_pump(False)
-        
         # Creating a Camera Object
         if platform.system() == "Windows":
             cap_num = 1
+            self.cap = cv2.VideoCapture(cap_num, cv2.CAP_DSHOW)
+            self.cap.set(3, 640)
+            self.cap.set(4, 480)
         elif platform.system() == "Linux":
             cap_num = 0
-        self.cap = cv.VideoCapture(cap_num)
-        self.cap.set(3, 640)
-        self.cap.set(4, 480)
-        
+            self.cap = cv2.VideoCapture(cap_num, cv2.CAP_V4L)
+            self.cap.set(3, 640)
+            self.cap.set(4, 480)
+
         # choose place to set cube
         self.color = 0
-        
+
         # Get ArUco marker dict that can be detected.
-        self.aruco_dict = cv.aruco.Dictionary_get(cv.aruco.DICT_6X6_250)
+        self.aruco_dict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_6X6_250)
         # Get ArUco marker params.
-        self.aruco_params = cv.aruco.DetectorParameters_create()
+        self.aruco_params = cv2.aruco.DetectorParameters_create()
         # 摄像头的内参矩阵
         self.camera_matrix = np.array([
             [781.33379113, 0., 347.53500524],
@@ -70,151 +44,158 @@ class Detect_marker():
             [0., 0., 1.]])
 
         # 摄像头的畸变系数
-        self.dist_coeffs = np.array(([[3.41360787e-01, -2.52114260e+00, -1.28012469e-03,  6.70503562e-03,
-             2.57018000e+00]]))
+        self.dist_coeffs = np.array(([[3.41360787e-01, -2.52114260e+00, -1.28012469e-03, 6.70503562e-03,
+                                       2.57018000e+00]]))
+        self.x_offset = x_offset
+        self.y_offset = y_offset
 
-    # 控制吸泵      
+        GPIO.setwarnings(False)
+        GPIO.setmode(GPIO.BCM)
+        GPIO.setup(20, GPIO.OUT)
+        GPIO.setup(21, GPIO.OUT)
+
+    # 控制吸泵
     def pub_pump(self, flag):
         if flag:
-            self.GPIO.output(20, 0)
-            self.GPIO.output(21, 0)
+            GPIO.output(20, 0)
+            time.sleep(0.05)
         else:
-            self.GPIO.output(20, 1)
-            self.GPIO.output(21, 1)
+            GPIO.output(20, 1)
+            time.sleep(0.05)
+            # 打开泄气阀门
+            GPIO.output(21, 0)
+            time.sleep(1)
+            GPIO.output(21, 1)
+            time.sleep(0.05)
 
     # Grasping motion
     def move(self, x, y, color):
-        
+
         print(color)
-        
+
         angles = [
-            [0, 0, 0, 0],  # init the point
-            [-29.0, 5.88, -4.92, -76.28],  # point to grab
-            [17.4, -10.1, -87.27, 5.8],  # point to grab
+            [-30.0, 0, 0, 7.28],  # point to grab
+            [0, 0, 0, 0],  # point to grab
         ]
 
-        coords = [
-            [166.4, -21.8, 219, 0.96], # 初始化点
-            [111.6, 159, 221.5, -120], # A分拣区
-            [-15.9, 164.6, 217.5, -119.35], # B分拣区  
-            [232.5, -134.1, 197.7, -45.26], # C分拣区
-            [132.6, -155.6, 211.8, -20.9], # D分拣区
-            
+        new_move_coords_to_angles = [
+            [-55.54, 17.84, 4.39, -76.28],  # D Sorting area
+            [-31.11, 53.61, -44.64, -70.57],  # C Sorting area
+            [36.82, 51.15, -40.34, -64.68],  # A Sorting area
+            [57.48, 23.46, 1.23, -64.68],  # B Sorting area
         ]
-        print('real_x, real_y:', (round(coords[0][0]+x, 2), round(coords[0][1]+y, 2)))
+        print('real_x, real_y:', (round(x, 2), round(y, 2)))
         # send coordinates to move mycobot
-        self.mc.send_angles(angles[0], 30)
+        self.mc.send_angles(angles[1], 40)
         time.sleep(3)
-        
-        self.mc.send_coords([coords[0][0]+x, coords[0][1]+y, 160, -65], 40, 1)
-        time.sleep(2)
-        # self.mc.send_coords([coords[0][0]+x, coords[0][1]+y, 108, 85], 20, 0)
-        self.mc.send_coords([coords[0][0]+x, coords[0][1]+y, 63, -65], 40, 1)
-        time.sleep(2)
-        
+
+        self.mc.send_coords([x, y, 160, 0], 60)
+        time.sleep(1.5)
+        self.mc.send_coords([x, y, 103, 0], 60)
+        time.sleep(2.5)
+
         # open pump
-        if "dev" in self.robot_raspi:
-            self.pub_pump(True)
-        
+        self.pub_pump(True)
+        time.sleep(1)
+
         self.mc.send_angle(2, 0, 20)
         time.sleep(0.3)
-        self.mc.send_angle(3, -20, 20)
+        self.mc.send_angle(3, 0, 20)
         time.sleep(2)
-        
+
         # 抓取后放置区域
-        self.mc.send_coords(coords[color], 40, 1) # coords[1] 为A分拣区，coords[2] 为B分拣区, coords[3] 为C分拣区，coords[4] 为D分拣区
+        self.mc.send_angles(new_move_coords_to_angles[color], 20)
         time.sleep(4)
-        
+
         # close pump
-        if "dev" in self.robot_raspi:
-            self.pub_pump(False)  
-        time.sleep(5)
-        
-        self.mc.send_angles(angles[1], 20)
-        time.sleep(1.5)
-        self.mc.send_angles([-30, 0, 0, 0], 20)
-        time.sleep(1.5)
+        self.pub_pump(False)
+        time.sleep(1)
+
+        self.mc.send_angles(angles[0], 40)
+        time.sleep(4)
 
     # decide whether grab cube
     def decide_move(self, x, y, color):
 
         # print(x,y)
         # detect the cube status move or run
-        if (abs(x - self.cache_x) + abs(y - self.cache_y)) / 2 > 5: # mm
+        if (abs(x - self.cache_x) + abs(y - self.cache_y)) / 2 > 5:  # mm
             self.cache_x, self.cache_y = x, y
             return
         else:
             self.cache_x = self.cache_y = 0
             # 调整吸泵吸取位置，y增大,向左移动;y减小,向右移动;x增大,前方移动;x减小,向后方移动
-            self.move(x+10, y+85, color)
+            self.move(round(x, 2), round(y, 2), color)
 
     # init mycobot
     def init_mycobot(self):
-        if "dev" in self.robot_raspi:
-            self.mc = MyPalletizer260(self.robot_raspi, 1000000)
-        elif "dev" in self.robot_m5:
-            self.mc = MyPalletizer260(self.robot_m5, 115200)
-        elif "dev" in self.robot_wio:
-            self.mc = MyPalletizer260(self.robot_wio, 115200)
+        self.mc = MyPalletizer260('/dev/ttyAMA0', 1000000)
         self.pub_pump(False)
-        self.mc.send_angles([-29.0, 5.88, -4.92, -76.28], 30)
+        self.mc.send_angles([-30.0, 0, 0, 7.28], 30)
         time.sleep(2)
-        
+
     def run(self):
         global pump_y, pump_x
         self.init_mycobot()
         print('ok')
-        num = sum_x = sum_y = 0 
-        while cv.waitKey(1) < 0:
+        num = sum_x = sum_y = 0
+        while cv2.waitKey(1) < 0:
             success, img = self.cap.read()
             if not success:
                 print("It seems that the image cannot be acquired correctly.")
                 break
-            
+
             # transfrom the img to model of gray
-            gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
             # Detect ArUco marker.
-            corners, ids, rejectImaPoint = cv.aruco.detectMarkers(
+            corners, ids, rejectImaPoint = cv2.aruco.detectMarkers(
                 gray, self.aruco_dict, parameters=self.aruco_params
             )
-            
-            # Determine the placement point of the QR code
-            if ids == np.array([[1]]):
-                self.color = 1
-            elif ids == np.array([[2]]):
-                self.color = 2
-            elif ids == np.array([[3]]):
-                self.color = 3
-            elif ids == np.array([[4]]):
-                self.color = 4
 
-            if len(corners) > 0:
-                if ids is not None:
-                    # get informations of aruco
-                    ret = cv.aruco.estimatePoseSingleMarkers(
-                        corners, 0.03, self.camera_matrix, self.dist_coeffs
-                    )
-                    # rvec:rotation offset,tvec:translation deviator
-                    (rvec, tvec) = (ret[0], ret[1])
-                    (rvec - tvec).any()
-                    xyz = tvec[0, 0, :]
-                    # calculate the coordinates of the aruco relative to the pump
-                    xyz = [round(xyz[0]*1000+pump_y, 2), round(xyz[1]*1000+pump_x, 2), round(xyz[2]*1000, 2)]
+            # 只处理目标ID
+            target_ids = [3, 4, 5, 6]
+            filtered_corners = []
+            filtered_ids = []
+            if ids is not None:
+                for i, id_val in enumerate(ids.flatten()):
+                    if id_val in target_ids:
+                        filtered_corners.append(corners[i])
+                        filtered_ids.append(id_val)
+            if len(filtered_corners) > 0:
+                filtered_corners = np.array(filtered_corners)
+                filtered_ids = np.array(filtered_ids).reshape(-1, 1)
+                # 根据 ArUco ID 获取 color（ID 3-6 → color 0-3）
+                colors = np.array([id_val - 3 for id_val in filtered_ids.flatten()]).reshape(-1, 1)
+                self.color = colors[0][0]
+                id_val = filtered_ids[0][0]
+                # get informations of aruco
+                ret = cv2.aruco.estimatePoseSingleMarkers(
+                    filtered_corners, 0.03, self.camera_matrix, self.dist_coeffs
+                )
+                # rvec:rotation offset,tvec:translation deviator
+                (rvec, tvec) = (ret[0], ret[1])
+                (rvec - tvec).any()
+                xyz = tvec[0, 0, :]
+                # calculate the coordinates of the aruco relative to the pump
+                xyz = [round(xyz[0] * 1000 + self.y_offset, 2),
+                       round(xyz[1] * 1000 + self.x_offset, 2),
+                       round(xyz[2] * 1000, 2)]
 
-                    # cv.putText(img, 'coords' + str(xyz), (0, 64), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv.LINE_AA)
-                    for i in range(rvec.shape[0]):
-			# draw the aruco on img
-                        cv.aruco.drawDetectedMarkers(img, corners)
-     
-                        if num < 40 :
-                            sum_x += xyz[1]
-                            sum_y += xyz[0]
-                            num += 1
-                        elif num ==40 :
-                            self.decide_move(sum_x/40.0, sum_y/40.0, self.color)
-                            num = sum_x = sum_y = 0
+                # cv2.putText(img, str(xyz[:2]), (0, 64), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
+                for i in range(rvec.shape[0]):
+                    # draw the aruco on img
+                    cv2.aruco.drawDetectedMarkers(img, filtered_corners)
 
-            cv.imshow("encode_image", img)
+                    if num < 40:
+                        sum_x += xyz[1]
+                        sum_y += xyz[0]
+                        num += 1
+                    elif num == 40:
+                        self.decide_move(sum_x / 40.0, sum_y / 40.0, self.color)
+                        num = sum_x = sum_y = 0
+
+            cv2.imshow("encode_image", img)
+
 
 if __name__ == "__main__":
     detect = Detect_marker()

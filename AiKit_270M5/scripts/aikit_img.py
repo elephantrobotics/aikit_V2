@@ -269,8 +269,8 @@ class Object_detect():
                            interpolation=cv2.INTER_CUBIC)
         if self.x1 != self.x2:
             # the cutting ratio here is adjusted according to the actual situation
-            frame = frame[int(self.y2 * 0.2):int(self.y1 * 1.15),
-                          int(self.x1 * 0.7):int(self.x2 * 1.15)]
+            frame = frame[int(self.y2 * 0.66):int(self.y1 * 1.1),
+                          int(self.x1 * 0.86):int(self.x2 * 1.08)]
         return frame
 
     # according the class_id to get object name
