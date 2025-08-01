@@ -10,13 +10,19 @@ import serial
 import serial.tools.list_ports
 from pymycobot.mycobot280 import MyCobot280
 
+from offset_utils import load_offset_from_txt
+
 IS_CV_4 = cv2.__version__[0] == '4'
 __version__ = "1.0"  # Adaptive seeed
+
+offset_path = '/home/er/AiKit_UI/libraries/offset/myCobot 280 for M5_feature.txt'
+
+camera_x, camera_y, camera_z = load_offset_from_txt(offset_path)
 
 
 class Object_detect():
 
-    def __init__(self, camera_x=187, camera_y=12):
+    def __init__(self, camera_x=camera_x, camera_y=camera_y):
         # inherit the parent class
         super(Object_detect, self).__init__()
 
@@ -57,6 +63,7 @@ class Object_detect():
         self.aruco_dict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_6X6_250)
         # Get ArUco marker params.
         self.aruco_params = cv2.aruco.DetectorParameters_create()
+        self.camera_z = camera_z
 
     # 开启吸泵 m5
     def pump_on(self):
@@ -112,8 +119,8 @@ class Object_detect():
 
         # send coordinates to move mycobot
         self.mc.send_coords([x, y, 170.6, 179.87, -3.78, -62.75], 70, 1)
-        self.mc.send_coords([x, y, 124, 179.87, -3.78, -62.75], 70, 1)
-        data = [x, y, 65, 179.87, -3.78, -62.75]
+        self.mc.send_coords([x, y, self.camera_z, 179.87, -3.78, -62.75], 70, 1)
+        data = [x, y, self.camera_z, 179.87, -3.78, -62.75]
         self.check_position(data, 1)
 
         # open pump

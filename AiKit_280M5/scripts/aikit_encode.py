@@ -9,13 +9,19 @@ import serial
 import serial.tools.list_ports
 from pymycobot.mycobot280 import MyCobot280
 
+from offset_utils import load_offset_from_txt
+
 # y轴偏移量
 pump_y = -55
 # x轴偏移量
 pump_x = 15
 
+offset_path = '/home/er/AiKit_UI/libraries/offset/myCobot 280 for M5_encode.txt'
+
+camera_x, camera_y, camera_z = load_offset_from_txt(offset_path)
+
 class Detect_marker():
-    def __init__(self, x_offset=216, y_offset=33):
+    def __init__(self, x_offset=camera_x, y_offset=camera_y):
         
         # set cache of real coord
         self.cache_x = self.cache_y = 0
@@ -56,6 +62,7 @@ class Detect_marker():
 
         self.x_offset = x_offset
         self.y_offset = y_offset
+        self.camera_z = camera_z
     
     # 控制吸泵      
     def pub_pump(self, flag):
@@ -123,8 +130,8 @@ class Detect_marker():
         
         self.mc.send_coords([x, y, 170, 178.99, -3.78, -62.9], 70, 1)
 
-        self.mc.send_coords([x, y, 124, 178.99, -3.78, -62.9], 70, 1)
-        data = [x, y, 65.5, 178.99, -3.78, -62.9]
+        self.mc.send_coords([x, y, self.camera_z, 178.99, -3.78, -62.9], 70, 1)
+        data = [x, y, self.camera_z, 178.99, -3.78, -62.9]
         self.check_position(data, 1)
         
         # open pump

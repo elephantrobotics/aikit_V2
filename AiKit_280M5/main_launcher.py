@@ -39,16 +39,16 @@ def keyboard_listener():
                 run_script('scripts/aikit_color.py')
                 time.sleep(0.5)
             elif keyboard.is_pressed('2'):
-                run_script('scripts/aikit_shape.py')
-                time.sleep(0.5)
-            elif keyboard.is_pressed('3'):
                 run_script('scripts/aikit_encode.py')
                 time.sleep(0.5)
-            elif keyboard.is_pressed('4'):
+            elif keyboard.is_pressed('3'):
                 run_script('scripts/aikit_img.py')
                 time.sleep(0.5)
-            elif keyboard.is_pressed('5'):
+            elif keyboard.is_pressed('4'):
                 run_script('scripts/yolov5_img.py')
+                time.sleep(0.5)
+            elif keyboard.is_pressed('5'):
+                run_script('../../handle_control/260M5_wireless_keyboard_mouse_handle_control_raspi_linux.py')
                 time.sleep(0.5)
             elif keyboard.is_pressed('esc'):
                 print("退出监听")

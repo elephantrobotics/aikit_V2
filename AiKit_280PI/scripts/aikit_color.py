@@ -8,20 +8,24 @@ import cv2
 import numpy as np
 from pymycobot.mycobot280 import MyCobot280
 
+from offset_utils import load_offset_from_txt
+
 IS_CV_4 = cv2.__version__[0] == '4'
 __version__ = "1.0"
 
 
-# Adaptive seeed
+offset_path = '/home/er/AiKit_UI/libraries/offset/myCobot 280 for Pi_color.txt'
 
+camera_x, camera_y, camera_z = load_offset_from_txt(offset_path)
 
 class Object_detect():
 
-    def __init__(self, camera_x=190, camera_y=13):
+    def __init__(self, camera_x=camera_x, camera_y=camera_y):
         # inherit the parent class
         super(Object_detect, self).__init__()
         # declare mycobot280
         self.mc = None
+        self.camera_z = camera_z
 
         # 移动角度
         self.move_angles = [
@@ -131,8 +135,8 @@ class Object_detect():
 
         # send coordinates to move mycobot
         self.mc.send_coords([x, y, 170.6, 179.87, -3.78, -62.75], 70, 1)  # usb :rx,ry,rz -173.3, -5.48, -57.9
-        self.mc.send_coords([x, y, 124, 179.87, -3.78, -62.75], 70, 1)
-        data = [x, y, 103, 179.87, -3.78, -62.75]
+        self.mc.send_coords([x, y, self.camera_z, 179.87, -3.78, -62.75], 70, 1)
+        data = [x, y, self.camera_z, 179.87, -3.78, -62.75]
         self.check_position(data, 1)
 
         # open pump
