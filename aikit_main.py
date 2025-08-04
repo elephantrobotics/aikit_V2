@@ -28,7 +28,7 @@ def get_script_path(script_name):
     if not device_name:
         print("请先选择设备！")
         return None
-    return os.path.join('/home/er/aikit_V2', device_name, 'AiKit_280M5/scripts', script_name)
+    return os.path.join('/home/er/aikit_V2', device_name, 'scripts', script_name)
 
 # 启动脚本函数
 def run_script(script_path, use_sudo=False):
