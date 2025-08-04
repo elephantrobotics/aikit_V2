@@ -36,6 +36,24 @@ button_pressed = False
 hat_pressed = False
 previous_state = [0, 0, 0, 0, 0, 0]
 
+joystick = None
+last_joystick_check_time = time.time()
+
+def init_joystick():
+    global joystick
+    pygame.joystick.quit()
+    pygame.joystick.init()
+    count = pygame.joystick.get_count()
+    if count > 0:
+        joystick = pygame.joystick.Joystick(0)
+        joystick.init()
+        print(f"[Joystick] Connected: {joystick.get_name()}")
+    else:
+        joystick = None
+        print("[Joystick] No joystick found.")
+
+
+init_joystick()
 
 # Function to turn on the vacuum pump (electromagnetic valve)
 def pump_on():
@@ -153,19 +171,32 @@ def joy_handler():
                 hat_pressed = False
 
 # Initialize joystick if detected
-if pygame.joystick.get_count() > 0:
-    joystick = pygame.joystick.Joystick(0)
-    joystick.init()
-    time.sleep(1)
-else:
-    print("No controller detected")
-    pygame.quit()
-    sys.exit()
-# Main loop to process events
+# if pygame.joystick.get_count() > 0:
+#     joystick = pygame.joystick.Joystick(0)
+#     joystick.init()
+#     time.sleep(1)
+# else:
+#     print("No controller detected")
+#     pygame.quit()
+#     sys.exit()
+# # Main loop to process events
+# running = True
+# while running:
+#     for event in pygame.event.get():
+#         if event.type == pygame.QUIT:
+#             running = False
+#         joy_handler()
+# pygame.quit()
 running = True
 while running:
+    if (joystick is None or not joystick.get_init()) and time.time() - last_joystick_check_time > 5:
+        init_joystick()
+        last_joystick_check_time = time.time()
+
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
-        joy_handler()
+        if joystick is not None:
+            joy_handler()
+
 pygame.quit()

@@ -3,7 +3,7 @@ import sys
 import time
 import traceback
 from multiprocessing import Process, Pipe
-
+import signal
 import cv2
 import numpy as np
 import serial
@@ -403,7 +403,22 @@ def process_transform_frame(frame, x1, y1, x2, y2):
     return frame
 
 
+cap = None  # 声明全局变量
+
+def cleanup(sig, frame):
+    global cap
+    print("接收到中断信号，释放摄像头...")
+    if cap is not None:
+        cap.release()
+    cv2.destroyAllWindows()
+    sys.exit(0)
+
+
 def process_display_frame(connection):
+    global cap
+    signal.signal(signal.SIGTERM, cleanup)
+    signal.signal(signal.SIGINT, cleanup)
+
     coord = None
     dst = None
     x1 = 0
@@ -452,6 +467,8 @@ def process_display_frame(connection):
         cv2.imshow("figure", frame)
         time.sleep(0.04)
     connection.send(STOP_PROCESSING)
+
+    cleanup(None, None)
 
 
 def run():
