@@ -38,10 +38,10 @@ class Object_detect():
         ]
 
         self.new_move_coords_to_angles = [
-            [-39.99, -10.28, -84.99, 4.83, 0.08, -7.99],  # D Sorting area
-            [-22.93, -52.82, -26.45, -5.53, 0.08, -7.91],  # C Sorting area
-            [49.13, -53.61, -27.15, -6.41, 0.08, -7.73],  # A Sorting area
-            [73.38, 0.35, -90.26, 7.2, 0.08, -9.75],  # B Sorting area
+            [-33.22, -10.28, -84.99, 4.83, 0.08, -7.99],  # D Sorting area
+            [-21.79, -52.82, -26.45, -5.53, 0.08, -7.91],  # C Sorting area
+            [47.81, -53.61, -27.15, -6.41, 0.08, -7.73],  # A Sorting area
+            [72.42, -6.06, -98.43, 14.23, -0.87, -8.96],  # B Sorting area
         ]
 
         # choose place to set cube
