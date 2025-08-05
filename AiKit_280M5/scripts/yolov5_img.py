@@ -42,13 +42,14 @@ class Object_detect():
             [18.8, -7.91, -54.49, -23.02, -0.79, -14.76],  # point to grab
         ]
 
-        # 移动坐标
         self.new_move_coords_to_angles = [
             [-33.22, -10.28, -84.99, 4.83, 0.08, -7.99],  # D Sorting area
             [-21.79, -52.82, -26.45, -5.53, 0.08, -7.91],  # C Sorting area
             [47.81, -53.61, -27.15, -6.41, 0.08, -7.73],  # A Sorting area
             [72.42, -6.06, -98.43, 14.23, -0.87, -8.96],  # B Sorting area
         ]
+
+        self.z_down_values = [138, 145, 147, 135]  # D, C, A, B
 
         # choose place to set cube
         self.color = 0
@@ -182,6 +183,9 @@ class Object_detect():
 
         self.mc.send_angles(self.new_move_coords_to_angles[color], 50)
         self.check_position(self.new_move_coords_to_angles[color], 0)
+
+        self.mc.send_coord(3, self.z_down_values[color], 50)
+        time.sleep(1.5)
 
         # close pump
         self.pump_off()

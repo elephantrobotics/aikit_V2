@@ -42,6 +42,8 @@ class Object_detect():
             [72.42, -6.06, -98.43, 14.23, -0.87, -8.96],  # B Sorting area
         ]
 
+        self.z_down_values = [138, 145, 147, 135]  # D, C, A, B
+
         # choose place to set cube
         self.color = 0
         # parameters to calculate camera clipping parameters
@@ -177,6 +179,9 @@ class Object_detect():
 
         self.mc.send_angles(self.new_move_coords_to_angles[color], 50)
         self.check_position(self.new_move_coords_to_angles[color], 0)
+
+        self.mc.send_coord(3, self.z_down_values[color], 50)
+        time.sleep(1.5)
 
         # close pump
         self.pump_off()

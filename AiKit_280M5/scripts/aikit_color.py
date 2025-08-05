@@ -45,6 +45,8 @@ class Object_detect():
             [72.42, -6.06, -98.43, 14.23, -0.87, -8.96],  # B Sorting area
         ]
 
+        self.z_down_values = [138, 145, 147, 135]  # D, C, A, B
+
         # choose place to set cube 选择放置立方体的地方
         self.color = 0
         # parameters to calculate camera clipping parameters 计算相机裁剪参数的参数
@@ -80,7 +82,7 @@ class Object_detect():
         # Get ArUco marker params. 获取 ArUco 标记参数
         self.aruco_params = cv2.aruco.DetectorParameters_create()
         self.camera_z = camera_z
-        print('xyz:', camera_x, camera_y, camera_z)
+        # print('xyz:', self.camera_x, camera_y, self.camera_z)
 
     # 开启吸泵 m5
     def pump_on(self):
@@ -162,6 +164,9 @@ class Object_detect():
 
         self.mc.send_angles(self.new_move_coords_to_angles[color], 50)
         self.check_position(self.new_move_coords_to_angles[color], 0)
+
+        self.mc.send_coord(3, self.z_down_values[color], 50)
+        time.sleep(1.5)
 
         # close pump
         self.pump_off()
@@ -367,7 +372,7 @@ if __name__ == "__main__":
     # open the camera
     if platform.system() == "Windows":
         cap_num = 1
-        cap = cv2.VideoCapture(cap_num, cv2.CAP_V4L)
+        cap = cv2.VideoCapture(cap_num, cv2.CAP_DSHOW)
 
         if not cap.isOpened():
             cap.open(1)

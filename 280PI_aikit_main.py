@@ -49,7 +49,7 @@ def on_press(key):
             if key.char == '1':
                 run_script(os.path.join(BASE_DIR, 'aikit_color.py'))
             elif key.char == '2':
-                print("形状识别功能已被移除或未定义")
+                run_script(os.path.join(BASE_DIR, 'aikit_shape.py'))
             elif key.char == '3':
                 run_script(os.path.join(BASE_DIR, 'aikit_encode.py'))
             elif key.char == '4':

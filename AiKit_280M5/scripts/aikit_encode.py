@@ -123,6 +123,8 @@ class Detect_marker():
             [47.81, -53.61, -27.15, -6.41, 0.08, -7.73],  # A Sorting area
             [72.42, -6.06, -98.43, 14.23, -0.87, -8.96],  # B Sorting area
         ]
+        z_down_values = [138, 145, 147, 135]  # D, C, A, B
+
         print('real_x, real_y:', round(x, 2), round(y, 2))
         # send coordinates to move mycobot
         self.mc.send_angles(angles[1], 50)
@@ -152,6 +154,9 @@ class Detect_marker():
         # 抓取后放置区域
         self.mc.send_angles(new_move_coords_to_angles[color], 50)
         self.check_position(new_move_coords_to_angles[color], 0)
+
+        self.mc.send_coord(3, z_down_values[color], 50)
+        time.sleep(1.5)
         
         # close pump
         self.pub_pump(False)

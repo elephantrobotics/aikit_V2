@@ -17,8 +17,16 @@ coords = [
 
 angles = [0, 0, 0, 0, 0, 0]
 
-mc.send_coords(coords[0], 20, 1)
-time.sleep(3)
-mc.send_coords(coords[1], 20, 1)
+new_move_coords_to_angles = [
+            [-33.22, -10.28, -84.99, 4.83, 0.08, -7.99],  # D Sorting area
+            [-21.79, -52.82, -26.45, -5.53, 0.08, -7.91],  # C Sorting area
+            [47.81, -53.61, -27.15, -6.41, 0.08, -7.73],  # A Sorting area
+            [72.42, -6.06, -98.43, 14.23, -0.87, -8.96],  # B Sorting area
+        ]
 
+coord_down_D = 138
+coord_down_A = 147
+coord_down_C = 145
+coord_down_B = 135
 
+mc.send_angles(new_move_coords_to_angles[0], 50)
