@@ -207,7 +207,7 @@ class Object_detect():
         self.cache_x = self.cache_y = 0
         # 调整吸泵吸取位置，y增大,向左移动;y减小,向右移动;x增大,前方移动;x减小,向后方移动
 
-        # self.move(x, y, color)
+        self.move(x, y, color)
 
     # init mycobot
     def run(self):
@@ -448,7 +448,7 @@ def runs():
     detect = Object_detect()
 
     # init mycobot
-    # detect.run()
+    detect.run()
     _init_ = 20  # 
     init_num = 0
     nparams = 0
