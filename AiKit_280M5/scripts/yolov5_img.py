@@ -207,7 +207,7 @@ class Object_detect():
         self.cache_x = self.cache_y = 0
         # 调整吸泵吸取位置，y增大,向左移动;y减小,向右移动;x增大,前方移动;x减小,向后方移动
 
-        self.move(x, y, color)
+        # self.move(x, y, color)
 
     # init mycobot
     def run(self):
@@ -215,8 +215,8 @@ class Object_detect():
         if self.mc.get_fresh_mode() != 0:
             self.mc.set_fresh_mode(0)
         self.pump_off()
-        self.mc.send_angles([0.61, 45.87, -92.37, -41.3, 2.02, 9.58], 50)
-        self.check_position([0.61, 45.87, -92.37, -41.3, 2.02, 9.58], 0)
+        # self.mc.send_angles([0.61, 45.87, -92.37, -41.3, 2.02, 9.58], 50)
+        # self.check_position([0.61, 45.87, -92.37, -41.3, 2.02, 9.58], 0)
 
     # draw aruco
     def draw_marker(self, img, x, y):
@@ -423,6 +423,21 @@ class Object_detect():
         else:
             return None
 
+    def transform_frame_image(self, frame):
+        # enlarge the image by 1.5 times
+        fx = 1.5
+        fy = 1.5
+        frame = cv2.resize(frame, (0, 0),
+                           fx=fx,
+                           fy=fy,
+                           interpolation=cv2.INTER_CUBIC)
+        x1, x2 = 507, 653
+        y1, y2 = 483, 238
+        if x1 != x2:
+            # the cutting ratio here is adjusted according to the actual situation
+            frame = frame[int(y2 * 0.2):int(y1 * 1.15),
+                          int(x1 * 0.4):int(x2 * 1.15)]
+        return frame
 
 status = True
 
@@ -433,7 +448,7 @@ def runs():
     detect = Object_detect()
 
     # init mycobot
-    detect.run()
+    # detect.run()
     _init_ = 20  # 
     init_num = 0
     nparams = 0
@@ -455,7 +470,7 @@ def runs():
 
     print("*  热键(请在摄像头的窗口使用):                   *")
     print("*  hotkey(please use it in the camera window): *")
-    print("*  z: 拍摄图片(take picture)                    *")
+    print("*  z: 自动裁剪图片(automatically crop images)    *")
     print("*  q: 退出(quit)                                *")
 
     while cv2.waitKey(1) < 0:
@@ -466,7 +481,7 @@ def runs():
             print("Please place an identifiable object in the camera window for shooting")
             print("*  热键(请在摄像头的窗口使用):                   *")
             print("*  hotkey(please use it in the camera window): *")
-            print("*  z: 拍摄图片(take picture)                    *")
+            print("*  z: 自动裁剪图片(automatically crop images)    *")
             print("*  q: 退出(quit)                                *")
         # 读入每一帧
         ret, frame = cap.read()
@@ -479,27 +494,21 @@ def runs():
             print('quit')
             break
         elif input == ord('z'):
-            print("请截取白色识别区域的部分")
-            print("Please capture the part of the white recognition area")
-            # 选择ROI
-            roi = cv2.selectROI(windowName="capture",
-                                img=frame,
-                                showCrosshair=False,
-                                fromCenter=False)
-            x, y, w, h = roi
-            print(roi)
-            if roi != (0, 0, 0, 0):
-                crop = frame[y:y + h, x:x + w]
-                cv2.imwrite(path_img, crop)
-                cap.release()
-                cv2.destroyAllWindows()
-                status = False
+            print("开始自动截取白色识别区域")
+            print("Start auto-cropping white recognition area")
+            # 自动截取区域（使用 transform_frame_image）
+            transformed = detect.transform_frame_image(frame)
+            # 保存图像
+            cv2.imwrite(path_img, transformed)
+            cap.release()
+            cv2.destroyAllWindows()
+            status = False
 
             while True:
                 frame = cv2.imread(path_img)
 
                 # frame = frame[170:700, 230:720]
-                frame = detect.transform_frame(frame)
+                # frame = detect.transform_frame(frame)
 
                 # cv2.imshow('oringal',frame)
 
@@ -573,6 +582,8 @@ def runs():
                     cv2.imshow("detect_done", input_img)
                     cv2.waitKey(0)
                     cv2.destroyAllWindows()
+                else:
+                    print('Not recognized, please reposition the object！！！')
                 break
 
 

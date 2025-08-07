@@ -417,6 +417,21 @@ class Object_detect():
         else:
             return None
 
+    def transform_frame_image(self, frame):
+        # enlarge the image by 1.5 times
+        fx = 1.5
+        fy = 1.5
+        frame = cv2.resize(frame, (0, 0),
+                           fx=fx,
+                           fy=fy,
+                           interpolation=cv2.INTER_CUBIC)
+        x1, x2 = 507, 653
+        y1, y2 = 483, 238
+        if x1 != x2:
+            # the cutting ratio here is adjusted according to the actual situation
+            frame = frame[int(y2 * 0.2):int(y1 * 1.15),
+                          int(x1 * 0.4):int(x2 * 1.15)]
+        return frame
 
 status = True
 
@@ -449,7 +464,7 @@ def runs():
 
     print("*  热键(请在摄像头的窗口使用):                   *")
     print("*  hotkey(please use it in the camera window): *")
-    print("*  z: 拍摄图片(take picture)                    *")
+    print("*  z: 自动裁剪图片(automatically crop images)    *")
     print("*  q: 退出(quit)                                *")
 
     while cv2.waitKey(1) < 0:
@@ -460,7 +475,7 @@ def runs():
             print("Please place an identifiable object in the camera window for shooting")
             print("*  热键(请在摄像头的窗口使用):                   *")
             print("*  hotkey(please use it in the camera window): *")
-            print("*  z: 拍摄图片(take picture)                    *")
+            print("*  z: 自动裁剪图片(automatically crop images)    *")
             print("*  q: 退出(quit)                                *")
         # 读入每一帧
         ret, frame = cap.read()
@@ -473,27 +488,21 @@ def runs():
             print('quit')
             break
         elif input == ord('z'):
-            print("请截取白色识别区域的部分")
-            print("Please capture the part of the white recognition area")
-            # 选择ROI
-            roi = cv2.selectROI(windowName="capture",
-                                img=frame,
-                                showCrosshair=False,
-                                fromCenter=False)
-            x, y, w, h = roi
-            print(roi)
-            if roi != (0, 0, 0, 0):
-                crop = frame[y:y + h, x:x + w]
-                cv2.imwrite(path_img, crop)
-                cap.release()
-                cv2.destroyAllWindows()
-                status = False
+            print("开始自动截取白色识别区域")
+            print("Start auto-cropping white recognition area")
+            # 自动截取区域（使用 transform_frame_image）
+            transformed = detect.transform_frame_image(frame)
+            # 保存图像
+            cv2.imwrite(path_img, transformed)
+            cap.release()
+            cv2.destroyAllWindows()
+            status = False
 
             while True:
                 frame = cv2.imread(path_img)
 
                 # frame = frame[170:700, 230:720]
-                frame = detect.transform_frame(frame)
+                # frame = detect.transform_frame(frame)
 
                 # cv2.imshow('oringal',frame)
 
@@ -567,6 +576,8 @@ def runs():
                     cv2.imshow("detect_done", input_img)
                     cv2.waitKey(0)
                     cv2.destroyAllWindows()
+                else:
+                    print('Not recognized, please reposition the object！！！')
                 break
 
 

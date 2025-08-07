@@ -274,6 +274,7 @@ class Object_detect():
         fy = 1.5
         frame = cv2.resize(frame, (0, 0), fx=fx, fy=fy,
                            interpolation=cv2.INTER_CUBIC)
+        print('x1,y1,x2,y2', self.x1, self.y1, self.x2, self.y2)
         if self.x1 != self.x2:
             # the cutting ratio here is adjusted according to the actual situation
             frame = frame[int(self.y2 * 0.66):int(self.y1 * 1.1),
