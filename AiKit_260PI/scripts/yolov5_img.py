@@ -9,13 +9,20 @@ import cv2
 import numpy as np
 from pymycobot.mypalletizer260 import MyPalletizer260
 
+from offset_utils import load_offset_from_txt
+
 IS_CV_4 = cv2.__version__[0] == '4'
-__version__ = "1.0"  # Adaptive seeed
+__version__ = "1.0"
+
+
+offset_path = '/home/er/AiKit_UI/libraries/offset/myPalletizer 260 for PI_yolov5.txt'
+
+camera_x, camera_y, camera_z = load_offset_from_txt(offset_path)
 
 
 class Object_detect():
 
-    def __init__(self, camera_x=178, camera_y=12):
+    def __init__(self, camera_x=camera_x, camera_y=camera_y):
         # inherit the parent class
         super(Object_detect, self).__init__()
 
@@ -29,11 +36,12 @@ class Object_detect():
         ]
 
         self.new_move_coords_to_angles = [
-            [-55.54, 17.84, 4.39, -76.28],  # D Sorting area
-            [-31.11, 53.61, -44.64, -70.57],  # C Sorting area
-            [36.82, 51.15, -40.34, -64.68],  # A Sorting area
-            [57.48, 23.46, 1.23, -64.68],  # B Sorting area
+            [-54, 14.15, 16.34, 0],  # D Sorting area
+            [-35, 53.61, -44.64, 0],  # C Sorting area
+            [34, 51.15, -40.34, 0],  # A Sorting area
+            [52.38, 14.67, 12.83, -0.43],  # B Sorting area
         ]
+        self.z_down_values = [115, 120, 120, 115]  # D, C, A, B
 
         # choose place to set cube
         self.color = 0
@@ -88,6 +96,7 @@ class Object_detect():
             self.classes = f.read().rstrip('\n').split('\n')
 
         self.change_flag = False
+        self.camera_z = camera_z
 
         GPIO.setwarnings(False)
         GPIO.setmode(GPIO.BCM)
@@ -120,7 +129,7 @@ class Object_detect():
         # send coordinates to move mypal260
         self.mc.send_coords([x, y, 160, 0], 60)
         time.sleep(1.5)
-        self.mc.send_coords([x, y, 103, 0], 60)
+        self.mc.send_coords([x, y, self.camera_z, 0], 60)
         time.sleep(1.5)
 
         # open pump
@@ -134,12 +143,13 @@ class Object_detect():
 
         self.mc.send_angles(self.new_move_coords_to_angles[color], 20)
         time.sleep(4)
-
+        self.mc.send_coord(3, self.z_down_values[color], 25)
+        time.sleep(2.5)
         # close pump
         self.pump_off()
         time.sleep(2)
 
-        self.mc.send_angles(self.move_angles[0], 40)
+        self.mc.send_angles(self.move_angles[0], 20)
         time.sleep(3)
         print('请按空格键打开摄像头进行下一次图像存储和识别')
         print('Please press the space bar to open the camera for the next image storage and recognition')

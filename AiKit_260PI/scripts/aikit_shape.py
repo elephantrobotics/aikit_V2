@@ -1,68 +1,45 @@
 import cv2
 import numpy as np
 import time
-import os,sys
+import os, sys
+import RPi.GPIO as GPIO
 import math
 import platform
 from pymycobot.mypalletizer260 import MyPalletizer260
 
+from offset_utils import load_offset_from_txt
 
 IS_CV_4 = cv2.__version__[0] == '4'
 __version__ = "1.0"
-# Adaptive seeed
+
+
+offset_path = '/home/er/AiKit_UI/libraries/offset/myPalletizer 260 for PI_shape.txt'
+
+camera_x, camera_y, camera_z = load_offset_from_txt(offset_path)
 
 
 class Object_detect():
 
-    def __init__(self, camera_x = 165, camera_y = 10):
+    def __init__(self, camera_x=camera_x, camera_y=camera_y):
         # inherit the parent class
         super(Object_detect, self).__init__()
-        
+
         # declare mypal260
         self.mc = None
 
         # 移动角度
         self.move_angles = [
-            [0, 0, 0, 0],  # init the point
-            [-29.0, 5.88, -4.92, -76.28],  # point to grab
-            [17.4, -10.1, -87.27, 5.8],  # point to grab
+            [-30.0, 0, 0, 7.28],  # point to grab
+            [0, 0, 0, 0],  # point to grab
         ]
 
-        # 移动坐标
-        self.move_coords = [
-            [132.6, -155.6, 211.8, -20.9],   # above the first bucket red
-            [232.5, -134.1, 197.7, -45.26],    # above the second bucket green
-            [111.6, 159, 221.5, -120],   # above the third bucket blue
-            [-15.9, 164.6, 217.5, -119.35],     # gray
+        self.new_move_coords_to_angles = [
+            [-54, 14.15, 16.34, 0],  # D Sorting area
+            [-35, 53.61, -44.64, 0],  # C Sorting area
+            [34, 51.15, -40.34, 0],  # A Sorting area
+            [52.38, 14.67, 12.83, -0.43],  # B Sorting area
         ]
-        
-        # which robot: USB* is m5; ACM* is wio; AMA* is raspi
-        self.robot_m5 = os.popen("ls /dev/ttyUSB*").readline()[:-1]
-        self.robot_wio = os.popen("ls /dev/ttyACM*").readline()[:-1]
-        self.robot_raspi = os.popen("ls /dev/ttyAMA*").readline()[:-1]
-        self.robot_jes = os.popen("ls /dev/ttyTHS1").readline()[:-1]
-        self.raspi = False
-        if "dev" in self.robot_m5:
-            self.Pin = [2, 5]
-        elif "dev" in self.robot_wio:
-            # self.Pin = [20, 21]
-            self.Pin = [2, 5]
-
-            # for i in self.move_coords:
-            #     i[2] -= 20
-        elif "dev" in self.robot_raspi or "dev" in self.robot_jes:
-            import RPi.GPIO as GPIO
-            GPIO.setwarnings(False)
-            self.GPIO = GPIO
-            GPIO.setmode(GPIO.BCM)
-            GPIO.setup(20, GPIO.OUT)
-            GPIO.setup(21, GPIO.OUT)
-            GPIO.output(20, 1)
-            GPIO.output(21, 1)
-            self.raspi = True
-        if self.raspi:
-            self.gpio_status(False)
-        
+        self.z_down_values = [95, 105, 105, 95]  # D, C, A, B
         # choose place to set cube
         self.color = 0
         # parameters to calculate camera clipping parameters
@@ -82,76 +59,64 @@ class Object_detect():
         self.aruco_dict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_6X6_250)
         # Get ArUco marker params.
         self.aruco_params = cv2.aruco.DetectorParameters_create()
-        
-        # 初始化背景减法器
-        self.mog =cv2.bgsegm.createBackgroundSubtractorMOG() 
- 
-    # pump_control pi
-    def gpio_status(self, flag):
-        if flag:
-            self.GPIO.output(20, 0)
-            self.GPIO.output(21, 0)
-        else:
-            self.GPIO.output(20, 1)
-            self.GPIO.output(21, 1)
- 
-    # 开启吸泵 m5
-    def pump_on(self):
-        # 让2号位工作
-        self.mc.set_basic_output(2, 0)
-        # 让5号位工作
-        self.mc.set_basic_output(5, 0)
 
-    # 停止吸泵 m5
+        # 初始化背景减法器
+        self.mog = cv2.bgsegm.createBackgroundSubtractorMOG()
+        self.camera_z = camera_z
+
+        GPIO.setwarnings(False)
+        GPIO.setmode(GPIO.BCM)
+        GPIO.setup(20, GPIO.OUT)
+        GPIO.setup(21, GPIO.OUT)
+
+    # 开启吸泵
+    def pump_on(self):
+        GPIO.output(20, 0)
+        time.sleep(0.05)
+
+    # 停止吸泵
     def pump_off(self):
-        # 让2号位停止工作
-        self.mc.set_basic_output(2, 1)
-        # 让5号位停止工作
-        self.mc.set_basic_output(5, 1)
+        GPIO.output(20, 1)
+        time.sleep(0.05)
+        # 打开泄气阀门
+        GPIO.output(21, 0)
+        time.sleep(1)
+        GPIO.output(21, 1)
+        time.sleep(0.05)
 
     # Grasping motion
     def move(self, x, y, color):
         # send Angle to move mypal260
         print(color)
-        self.mc.send_angles(self.move_angles[0], 20)
+        self.mc.send_angles(self.move_angles[1], 40)
         time.sleep(3)
 
         # send coordinates to move mypal260
-        self.mc.send_coords([x, y, 100, 0], 40, 1)
+        self.mc.send_coords([x, y, 100, 0], 60)
         time.sleep(1.5)
-        self.mc.send_coords([x, y, 66, 0], 40, 1)
-        time.sleep(1.5)
-
+        self.mc.send_coords([x, y, self.camera_z, 0], 60)
+        time.sleep(2.5)
         # open pump
-        if "dev" in self.robot_m5 or "dev" in self.robot_wio:
-            self.pump_on()
-        elif "dev" in self.robot_raspi or "dev" in self.robot_jes:
-            self.gpio_status(True)
-            
+        self.pump_on()
+        time.sleep(1)
+
         self.mc.send_angle(2, 0, 20)
         time.sleep(0.3)
-        self.mc.send_angle(3, -20, 20)
+        self.mc.send_angle(3, 0, 20)
         time.sleep(2)
 
-        self.mc.send_coords(self.move_coords[color], 40, 1)
-        # self.pub_marker(self.move_coords[color][0]/1000.0, self.move_coords[color]
-        #                 [1]/1000.0, self.move_coords[color][2]/1000.0)
-        time.sleep(3)
-       
+        self.mc.send_angles(self.new_move_coords_to_angles[color], 20)
+        time.sleep(4)
+
+        self.mc.send_coord(3, self.z_down_values[color], 25)
+        time.sleep(2.5)
+
         # close pump
- 
-        if "dev" in self.robot_m5 or "dev" in self.robot_wio:
-            self.pump_off()
-        elif "dev" in self.robot_raspi or "dev" in self.robot_jes:
-            self.gpio_status(False)
+        self.pump_off()
+        time.sleep(2)
 
-        time.sleep(6)
-
-    
-        self.mc.send_angles(self.move_angles[1], 20)
-        time.sleep(1.5)
-        self.mc.send_angles([-30, 0, 0, 0], 20)
-        time.sleep(1.5)
+        self.mc.send_angles(self.move_angles[0], 20)
+        time.sleep(3)
 
     # decide whether grab cube
     def decide_move(self, x, y, color):
@@ -163,25 +128,20 @@ class Object_detect():
         else:
             self.cache_x = self.cache_y = 0
             # 调整吸泵吸取位置，y增大,向左移动;y减小,向右移动;x增大,前方移动;x减小,向后方移动
-            self.move(x, y, color)
+            self.move(round(x, 2), round(y, 2), color)
 
     # init mypal260
     def run(self):
-     
-        if "dev" in self.robot_wio :
-                self.mc = MyPalletizer260(self.robot_wio, 115200)
-        elif "dev" in self.robot_m5:
-            self.mc = MyPalletizer260(self.robot_m5, 115200)
-        elif "dev" in self.robot_raspi:
-            self.mc = MyPalletizer260(self.robot_raspi, 1000000)
-        self.gpio_status(False)
-        self.mc.send_angles([-29.0, 5.88, -4.92, -76.28], 20)
+
+        self.mc = MyPalletizer260('/dev/ttyAMA0', 1000000)
+        self.pump_off()
+        self.mc.send_angles(self.move_angles[0], 40)
         time.sleep(3)
 
     # draw aruco
     def draw_marker(self, img, x, y):
         # draw rectangle on img
-        cv2.rectangle( 
+        cv2.rectangle(
             img,
             (x - 20, y - 20),
             (x + 20, y + 20),
@@ -191,7 +151,7 @@ class Object_detect():
         )
         # add text on rectangle
         cv2.putText(img, "({},{})".format(x, y), (x, y),
-                    cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (243, 0, 0), 2,)
+                    cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (243, 0, 0), 2, )
 
     # get points of two aruco
     def get_calculate_params(self, img):
@@ -233,17 +193,18 @@ class Object_detect():
     def set_params(self, c_x, c_y, ratio):
         self.c_x = c_x
         self.c_y = c_y
-        self.ratio = 220.0/ratio
+        self.ratio = 235.0 / ratio
 
     # calculate the coords between cube and mypal260
     def get_position(self, x, y):
-        return ((y - self.c_y)*self.ratio + self.camera_x), ((x - self.c_x)*self.ratio + self.camera_y)
+        return ((y - self.c_y) * self.ratio + self.camera_x), ((x - self.c_x) * self.ratio + self.camera_y)
 
     """
     Calibrate the camera according to the calibration parameters.
     Enlarge the video pixel by 1.5 times, which means enlarge the video size by 1.5 times.
     If two ARuco values have been calculated, clip the video.
     """
+
     def transform_frame(self, frame):
         # enlarge the image by 1.5 times
         fx = 1.5
@@ -252,18 +213,18 @@ class Object_detect():
                            interpolation=cv2.INTER_CUBIC)
         if self.x1 != self.x2:
             # the cutting ratio here is adjusted according to the actual situation
-            frame = frame[int(self.y2*0.78):int(self.y1*1.1),
-                          int(self.x1*0.86):int(self.x2*1.08)]
+            frame = frame[int(self.y2 * 0.66):int(self.y1 * 1.1),
+                    int(self.x1 * 0.86):int(self.x2 * 1.08)]
         return frame
-    
+
     # 检测物体的形状
-    def shape_detect(self,img):
+    def shape_detect(self, img):
         x = 0
         y = 0
-        
+
         Alpha = 65.6
-        Gamma=-8191.5
-        cal = cv2.addWeighted(img, Alpha,img, 0, Gamma)
+        Gamma = -8191.5
+        cal = cv2.addWeighted(img, Alpha, img, 0, Gamma)
         # 转换为灰度图片
         gray = cv2.cvtColor(cal, cv2.COLOR_BGR2GRAY)
 
@@ -274,21 +235,20 @@ class Object_detect():
         dilation = cv2.dilate(erosion, np.ones(
             (1, 1), np.uint8), iterations=2)
 
-
         # 设定灰度图的阈值 175, 255
         _, threshold = cv2.threshold(dilation, 175, 255, cv2.THRESH_BINARY)
         # 边缘检测
-        edges = cv2.Canny(threshold,50,100)
+        edges = cv2.Canny(threshold, 50, 100)
         # 检测物体边框
-        contours,_ = cv2.findContours(
+        contours, _ = cv2.findContours(
             edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
 
-        if len(contours)>0:
+        if len(contours) > 0:
             for cnt in contours:
                 # if 6000>cv2.contourArea(cnt) and cv2.contourArea(cnt)>4500:
-                if cv2.contourArea(cnt)>5500:
+                if cv2.contourArea(cnt) > 6900:
                     objectType = None
-                    peri = cv2.arcLength(cnt,True)
+                    peri = cv2.arcLength(cnt, True)
                     approx = cv2.approxPolyDP(cnt, 0.02 * peri, True)
                     objCor = len(approx)
 
@@ -296,8 +256,8 @@ class Object_detect():
                         box
                         for box in [cv2.boundingRect(c) for c in contours]
                         if min(img.shape[0], img.shape[1]) / 10
-                        < min(box[2], box[3])
-                        < min(img.shape[0], img.shape[1]) / 1
+                           < min(box[2], box[3])
+                           < min(img.shape[0], img.shape[1]) / 1
                     ]
                     if boxes:
                         for box in boxes:
@@ -311,28 +271,28 @@ class Object_detect():
                         x = int(rect[0][0])
                         y = int(rect[0][1])
 
-                    if objCor==3:
-                        objectType = ["Triangle","三角形"]
+                    if objCor == 3:
+                        objectType = ["Triangle", "三角形"]
                         self.color = 3
                         cv2.drawContours(img, [cnt], 0, (0, 0, 255), 3)
-                        
-                    elif objCor==4:
+
+                    elif objCor == 4:
                         box = cv2.boxPoints(rect)
                         box = np.int0(box)
                         _W = math.sqrt(math.pow((box[0][0] - box[1][0]), 2) + math.pow((box[0][1] - box[1][1]), 2))
                         _H = math.sqrt(math.pow((box[0][0] - box[3][0]), 2) + math.pow((box[0][1] - box[3][1]), 2))
-                        aspRatio = _W/float(_H)
+                        aspRatio = _W / float(_H)
                         if 0.98 < aspRatio < 1.03:
-                            objectType = ["Square","正方形"]
+                            objectType = ["Square", "正方形"]
                             cv2.drawContours(img, [cnt], 0, (0, 0, 255), 3)
-                            self.color=1
+                            self.color = 1
                         else:
-                            objectType = ["Rectangle","长方形"]
+                            objectType = ["Rectangle", "长方形"]
                             cv2.drawContours(img, [cnt], 0, (0, 0, 255), 3)
-                            self.color=2
-                    elif objCor>=5:
+                            self.color = 2
+                    elif objCor >= 5:
                         objectType = ["Circle", "圆形"]
-                        self.color=0
+                        self.color = 0
                         cv2.drawContours(img, [cnt], 0, (0, 0, 255), 3)
                     else:
                         pass
@@ -343,19 +303,18 @@ class Object_detect():
         else:
             return None
 
-        
+
 if __name__ == "__main__":
 
     # open the camera
     if platform.system() == "Windows":
         cap_num = 1
-        # cap = cv2.VideoCapture(cap_num, cv2.CAP_V4L)
-        cap = cv2.VideoCapture(cap_num)
+        cap = cv2.VideoCapture(cap_num, cv2.CAP_DSHOW)
         if not cap.isOpened():
             cap.open(1)
     elif platform.system() == "Linux":
         cap_num = 0
-        cap = cv2.VideoCapture(cap_num)
+        cap = cv2.VideoCapture(cap_num, cv2.CAP_V4L)
         if not cap.isOpened():
             cap.open()
     # init a class of Object_detect
@@ -363,13 +322,13 @@ if __name__ == "__main__":
     # init mypal260
     detect.run()
 
-    _init_ = 20  
+    _init_ = 20
     init_num = 0
     nparams = 0
     num = 0
     real_sx = real_sy = 0
     while cv2.waitKey(1) < 0:
-       # read camera
+        # read camera
         _, frame = cap.read()
         # deal img
         frame = detect.transform_frame(frame)
@@ -394,10 +353,10 @@ if __name__ == "__main__":
                 continue
         elif init_num == 20:
             detect.set_cut_params(
-                (detect.sum_x1)/20.0,
-                (detect.sum_y1)/20.0,
-                (detect.sum_x2)/20.0,
-                (detect.sum_y2)/20.0,
+                (detect.sum_x1) / 20.0,
+                (detect.sum_y1) / 20.0,
+                (detect.sum_x2) / 20.0,
+                (detect.sum_y2) / 20.0,
             )
             detect.sum_x1 = detect.sum_x2 = detect.sum_y1 = detect.sum_y2 = 0
             init_num += 1
@@ -422,17 +381,17 @@ if __name__ == "__main__":
             nparams += 1
             # calculate and set params of calculating real coord between cube and mypal260
             detect.set_params(
-                (detect.sum_x1+detect.sum_x2)/20.0,
-                (detect.sum_y1+detect.sum_y2)/20.0,
-                abs(detect.sum_x1-detect.sum_x2)/10.0 +
-                abs(detect.sum_y1-detect.sum_y2)/10.0
+                (detect.sum_x1 + detect.sum_x2) / 20.0,
+                (detect.sum_y1 + detect.sum_y2) / 20.0,
+                abs(detect.sum_x1 - detect.sum_x2) / 10.0 +
+                abs(detect.sum_y1 - detect.sum_y2) / 10.0
             )
             print("ok")
             continue
 
         # get detect result
         detect_result = detect.shape_detect(frame)
-   
+
         if detect_result is None:
             cv2.imshow("figure", frame)
             continue
@@ -441,8 +400,8 @@ if __name__ == "__main__":
             # calculate real coord between cube and mypal260
             real_x, real_y = detect.get_position(x, y)
             if num == 20:
-                
-                detect.decide_move(real_sx/20.0, real_sy/20.0, detect.color)
+
+                detect.decide_move(real_sx / 20.0, real_sy / 20.0, detect.color)
                 num = real_sx = real_sy = 0
 
             else:

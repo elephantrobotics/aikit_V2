@@ -6,14 +6,22 @@ import cv2
 import numpy as np
 from pymycobot.mypalletizer260 import MyPalletizer260
 
+from offset_utils import load_offset_from_txt
+
 # y轴偏移量
 pump_y = -45
 # x轴偏移量
 pump_x = -30
 
 
+offset_path = '/home/er/AiKit_UI/libraries/offset/myPalletizer 260 for PI_encode.txt'
+
+camera_x, camera_y, camera_z = load_offset_from_txt(offset_path)
+
+
 class Detect_marker():
-    def __init__(self, x_offset=200, y_offset=32):
+
+    def __init__(self, x_offset=camera_x, y_offset=camera_y):
 
         self.mc = None
         # set cache of real coord
@@ -48,6 +56,7 @@ class Detect_marker():
                                        2.57018000e+00]]))
         self.x_offset = x_offset
         self.y_offset = y_offset
+        self.camera_z = camera_z
 
         GPIO.setwarnings(False)
         GPIO.setmode(GPIO.BCM)
@@ -79,11 +88,12 @@ class Detect_marker():
         ]
 
         new_move_coords_to_angles = [
-            [-55.54, 17.84, 4.39, -76.28],  # D Sorting area
-            [-31.11, 53.61, -44.64, -70.57],  # C Sorting area
-            [36.82, 51.15, -40.34, -64.68],  # A Sorting area
-            [57.48, 23.46, 1.23, -64.68],  # B Sorting area
+            [-54, 14.15, 16.34, 0],  # D Sorting area
+            [-35, 53.61, -44.64, 0],  # C Sorting area
+            [34, 51.15, -40.34, 0],  # A Sorting area
+            [52.38, 14.67, 12.83, -0.43],  # B Sorting area
         ]
+        z_down_values = [115, 120, 120, 115]  # D, C, A, B
         print('real_x, real_y:', (round(x, 2), round(y, 2)))
         # send coordinates to move mycobot
         self.mc.send_angles(angles[1], 40)
@@ -91,7 +101,7 @@ class Detect_marker():
 
         self.mc.send_coords([x, y, 160, 0], 60)
         time.sleep(1.5)
-        self.mc.send_coords([x, y, 103, 0], 60)
+        self.mc.send_coords([x, y, self.camera_z, 0], 60)
         time.sleep(2.5)
 
         # open pump
@@ -106,12 +116,13 @@ class Detect_marker():
         # 抓取后放置区域
         self.mc.send_angles(new_move_coords_to_angles[color], 20)
         time.sleep(4)
-
+        self.mc.send_coord(3, z_down_values[color], 25)
+        time.sleep(2.5)
         # close pump
         self.pub_pump(False)
         time.sleep(1)
 
-        self.mc.send_angles(angles[0], 40)
+        self.mc.send_angles(angles[0], 20)
         time.sleep(4)
 
     # decide whether grab cube
