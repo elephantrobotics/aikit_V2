@@ -21,7 +21,7 @@ offset_path = '/home/er/AiKit_UI/libraries/offset/mechArm 270 for M5_encode.txt'
 camera_x, camera_y, camera_z = load_offset_from_txt(offset_path)
 
 
-class Object_detect():
+class Detect_marker():
 
     def __init__(self, x_offset=camera_x, y_offset=camera_y):
         
