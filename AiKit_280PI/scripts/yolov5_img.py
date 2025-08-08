@@ -9,7 +9,7 @@ import cv2
 import numpy as np
 from pymycobot.mycobot280 import MyCobot280
 
-from AiKit_280PI.scripts.offset_utils import load_offset_from_txt
+from offset_utils import load_offset_from_txt
 
 IS_CV_4 = cv2.__version__[0] == '4'
 __version__ = "1.0"  # Adaptive seeed
