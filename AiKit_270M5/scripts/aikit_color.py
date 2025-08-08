@@ -10,16 +10,20 @@ import serial
 import serial.tools.list_ports
 from pymycobot.mecharm270 import MechArm270
 
+from offset_utils import load_offset_from_txt
+
 IS_CV_4 = cv2.__version__[0] == '4'
 __version__ = "1.0"
 
 
-# Adaptive seeed
+offset_path = '/home/er/AiKit_UI/libraries/offset/mechArm 270 for M5_color.txt'
+
+camera_x, camera_y, camera_z = load_offset_from_txt(offset_path)
 
 
 class Object_detect():
 
-    def __init__(self, camera_x=180, camera_y=0):
+    def __init__(self, camera_x=camera_x, camera_y=camera_y):
         # inherit the parent class
         super(Object_detect, self).__init__()
         # declare mecharm 270
@@ -37,10 +41,12 @@ class Object_detect():
 
         self.new_move_coords_to_angles = [
             [-52.64, 35.06, -39.63, -2.28, 82.35, 55.45],  # D
-            [-34.18, 60.9, -69.08, -0.96, 70.04, 88.06],  # C
+            [-35.59, 61.78, -68.2, -1.14, 68.29, 88.33],  # C
             [32.34, 58.35, -62.13, 4.3, 61.52, 15.64],  # A
             [55.19, 42.71, -46.4, -0.96, 84.19, 15.99]  # B
         ]
+
+        self.z_down_values = [125, 130, 135, 125]  # D, C, A, B
 
         # choose place to set cube 选择放置立方体的地方
         self.color = 0
@@ -53,8 +59,8 @@ class Object_detect():
             # "yellow": [np.array([11, 85, 70]), np.array([59, 255, 245])],
             # "yellow": [np.array([22, 93, 0]), np.array([45, 255, 245])],
             "yellow": [np.array([26, 43, 46]), np.array([34, 255, 255])],
-            # "red": [np.array([0, 43, 46]), np.array([8, 255, 255])],
-            "red": [np.array([170, 100, 100]), np.array([179, 255, 255])],
+            "red": [np.array([0, 43, 46]), np.array([8, 255, 255])],
+            # "red": [np.array([170, 100, 100]), np.array([179, 255, 255])],
             "green": [np.array([35, 43, 35]), np.array([90, 255, 255])],
             "blue": [np.array([100, 43, 46]), np.array([124, 255, 255])],
             "cyan": [np.array([78, 43, 46]), np.array([99, 255, 255])],
@@ -78,6 +84,8 @@ class Object_detect():
         self.aruco_dict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_6X6_250)
         # Get ArUco marker params. 获取 ArUco 标记参数
         self.aruco_params = cv2.aruco.DetectorParameters_create()
+        
+        self.camera_z = camera_z
 
     # 开启吸泵 m5
     def pump_on(self):
@@ -139,13 +147,13 @@ class Object_detect():
 
         # send coordinates to move mycobot
         self.mc.send_coords([x, y, 150, -176.1, 2.4, -125.1], 70, 1)  # usb :rx,ry,rz -173.3, -5.48, -57.9
-        self.mc.send_coords([x, y, 115, -176.1, 2.4, -125.1], 70, 1)  # -178.77, -2.69, 40.15     pi
-        # self.check_position([x, y, 115, -176.1, 2.4, -125.1], 1)
+        self.mc.send_coords([x, y, self.camera_z, -176.1, 2.4, -125.1], 70, 1)  # -178.77, -2.69, 40.15     pi
+        # self.check_position([x, y, self.camera_z, -176.1, 2.4, -125.1], 1)
         while self.mc.is_moving():
             time.sleep(0.2)
         time.sleep(1)
-        if self.mc.is_in_position([x, y, 115, -176.1, 2.4, -125.1], 1) != 1:
-            self.mc.send_coords([x, y, 115, -176.1, 2.4, -125.1], 70, 1)
+        if self.mc.is_in_position([x, y, self.camera_z, -176.1, 2.4, -125.1], 1) != 1:
+            self.mc.send_coords([x, y, self.camera_z, -176.1, 2.4, -125.1], 70, 1)
         time.sleep(1)
         # open pump
         self.pump_on()
@@ -166,6 +174,9 @@ class Object_detect():
 
         self.mc.send_angles(self.new_move_coords_to_angles[color], 50)
         self.check_position(self.new_move_coords_to_angles[color], 0)
+
+        self.mc.send_coord(3, self.z_down_values[color], 50)
+        time.sleep(1.5)
 
         # close pump
         self.pump_off()
@@ -274,7 +285,6 @@ class Object_detect():
         fy = 1.5
         frame = cv2.resize(frame, (0, 0), fx=fx, fy=fy,
                            interpolation=cv2.INTER_CUBIC)
-        print('x1,y1,x2,y2', self.x1, self.y1, self.x2, self.y2)
         if self.x1 != self.x2:
             # the cutting ratio here is adjusted according to the actual situation
             frame = frame[int(self.y2 * 0.66):int(self.y1 * 1.1),

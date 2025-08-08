@@ -1,23 +1,26 @@
 import traceback
-
+import RPi.GPIO as GPIO
 import cv2
 import numpy as np
 import time
-import os,sys
+import os, sys
 import math
-import platform
 
 from pymycobot.mecharm270 import MechArm270
-
+from offset_utils import load_offset_from_txt
 
 IS_CV_4 = cv2.__version__[0] == '4'
 __version__ = "1.0"
-# Adaptive seeed
+
+
+offset_path = '/home/er/AiKit_UI/libraries/offset/mechArm 270 for Pi_shape.txt'
+
+camera_x, camera_y, camera_z = load_offset_from_txt(offset_path)
 
 
 class Object_detect():
 
-    def __init__(self, camera_x = 150, camera_y = 5):
+    def __init__(self, camera_x=camera_x, camera_y=camera_y, camera_z=camera_z):
         # inherit the parent class
         super(Object_detect, self).__init__()
         # declare mecharm270
@@ -29,49 +32,23 @@ class Object_detect():
             [-33.31, 2.02, -10.72, -0.08, 95, -54.84],  # point to grab
         ]
 
-        # 移动坐标
-        self.move_coords = [
-            [96.5, -101.9, 185.6, 155.25, 19.14, 75.88], # above the red bucket
-            [180.9, -99.3, 184.6, 124.4, 30.9, 80.58], # above the green bucket
-            [77.4, 122.1, 179.2, 151.66, 17.94, 178.24],# above the blue bucket
-            [2.2, 128.5, 171.6, 163.27, 10.58, -147.25] # yellow
+        self.new_move_coords_to_angles = [
+            [-52.64, 35.06, -39.63, -2.28, 82.35, 55.45],  # D
+            [-35.59, 61.78, -68.2, -1.14, 68.29, 88.33],  # C
+            [32.34, 58.35, -62.13, 4.3, 61.52, 15.64],  # A
+            [55.19, 42.71, -46.4, -0.96, 84.19, 15.99]  # B
         ]
-        
-        # which robot: USB* is m5; ACM* is wio; AMA* is raspi
-        self.robot_m5 = os.popen("ls /dev/ttyUSB*").readline()[:-1]
-        self.robot_wio = os.popen("ls /dev/ttyACM*").readline()[:-1]
-        self.robot_raspi = os.popen("ls /dev/ttyAMA*").readline()[:-1]
-        self.robot_jes = os.popen("ls /dev/ttyTHS1").readline()[:-1]
-        self.raspi = False
-        if "dev" in self.robot_m5:
-            self.Pin = [2, 5]
-        elif "dev" in self.robot_wio:
-            # self.Pin = [20, 21]
-            self.Pin = [2, 5]
 
-            for i in self.move_coords:
-                i[2] -= 20
-        elif "dev" in self.robot_raspi or "dev" in self.robot_jes:
-            import RPi.GPIO as GPIO
-            GPIO.setwarnings(False)
-            self.GPIO = GPIO
-            GPIO.setmode(GPIO.BCM)
-            GPIO.setup(20, GPIO.OUT)
-            GPIO.setup(21, GPIO.OUT)
-            GPIO.output(20, 1)
-            GPIO.output(21, 1)
-            self.raspi = True
-        if self.raspi:
-            self.gpio_status(False)
-            
-            
+        self.z_down_values = [100, 105, 110, 100]  # D, C, A, B
+
+
         # choose place to set cube
         self.color = 0
         # parameters to calculate camera clipping parameters
         self.x1 = self.x2 = self.y1 = self.y2 = 0
         # set cache of real coord
         self.cache_x = self.cache_y = 0
-      
+
         # use to calculate coord between cube and mycobot
         self.sum_x1 = self.sum_x2 = self.sum_y2 = self.sum_y1 = 0
         # The coordinates of the grab center point relative to the mycobot
@@ -84,34 +61,33 @@ class Object_detect():
         self.aruco_dict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_6X6_250)
         # Get ArUco marker params.
         self.aruco_params = cv2.aruco.DetectorParameters_create()
-        
+
         # 初始化背景减法器
-        self.mog =cv2.bgsegm.createBackgroundSubtractorMOG() 
-    
-    # pump_control pi
-    def gpio_status(self, flag):
-        if flag:
-            self.GPIO.output(20, 0)
-            self.GPIO.output(21, 0)
-        else:
-            self.GPIO.output(20, 1)
-            self.GPIO.output(21, 1)
-    
-    # 开启吸泵 m5
+        self.mog = cv2.bgsegm.createBackgroundSubtractorMOG()
+
+        self.camera_z = camera_z
+
+        GPIO.setwarnings(False)
+        GPIO.setmode(GPIO.BCM)
+        GPIO.setup(20, GPIO.OUT)
+        GPIO.setup(21, GPIO.OUT)
+
+    # 开启吸泵
     def pump_on(self):
-        # 让2号位工作
-        # self.mc.set_basic_output(2, 0)
-        # 让5号位工作
-        self.mc.set_basic_output(5, 0)
+        GPIO.output(20, 0)
+        time.sleep(0.05)
 
-    # 停止吸泵 m5
+    # 停止吸泵
     def pump_off(self):
-        # 让2号位停止工作
-        self.mc.set_basic_output(2, 1)
-        # 让5号位停止工作
-        self.mc.set_basic_output(5, 1)
+        GPIO.output(20, 1)
+        time.sleep(0.05)
+        # 打开泄气阀门
+        GPIO.output(21, 0)
+        time.sleep(1)
+        GPIO.output(21, 1)
+        time.sleep(0.05)
 
-    def check_position(self, data, ids):
+    def check_position(self, data, ids, max_same_data_count=50):
         """
         循环检测是否到位某个位置
         :param data: 角度或者坐标
@@ -119,11 +95,23 @@ class Object_detect():
         :return:
         """
         try:
+            same_data_count = 0
+            last_data = None
+            start_time = time.time()
             while True:
+                # 超时检测
+                if (time.time() - start_time) >= 5:
+                    break
                 res = self.mc.is_in_position(data, ids)
-                # print('res', res)
-                if res == 1:
-                    time.sleep(0.1)
+                # print('res', res, data)
+                if data == last_data:
+                    same_data_count += 1
+                else:
+                    same_data_count = 0
+
+                last_data = data
+                # print('count:', same_data_count)
+                if res == 1 or same_data_count >= max_same_data_count:
                     break
                 time.sleep(0.1)
         except Exception as e:
@@ -132,53 +120,56 @@ class Object_detect():
 
     # Grasping motion
     def move(self, x, y, color):
-        # send Angle to move mecharm270
-        print(color)
-        self.mc.send_angles(self.move_angles[0], 30)
+        # send Angle to move mycobot280
+        print(color, 'real_x: ', x, 'real_y: ', y)
+        if x < 235:
+            self.camera_z -= 5
+        if x > 206:
+            print(
+                'The object is too far away and the target point cannot be reached. Please reposition the identifiable object!')
+            return
+        self.mc.send_angles(self.move_angles[0], 50)
         self.check_position(self.move_angles[0], 0)
 
         # send coordinates to move mycobot
-        self.mc.send_coords([x, y,  110, -176.1, 2.4, -125.1], 40, 1) # usb :rx,ry,rz -173.3, -5.48, -57.9
-
-
-        # self.mc.send_coords([x, y, 150, 179.87, -3.78, -62.75], 25, 0)
-        # time.sleep(3)
-
-        self.mc.send_coords([x, y, 70, -176.1, 2.4, -125.1], 40, 1)
-        self.check_position([x, y, 70, -176.1, 2.4, -125.1], 1)
+        self.mc.send_coords([x, y, 150, -176.1, 2.4, -125.1], 70, 1)  # usb :rx,ry,rz -173.3, -5.48, -57.9
+        self.mc.send_coords([x, y, self.camera_z, -176.1, 2.4, -125.1], 70, 1)  # -178.77, -2.69, 40.15     pi
+        # self.check_position([x, y, 115, -176.1, 2.4, -125.1], 1)
+        while self.mc.is_moving():
+            time.sleep(0.2)
+        time.sleep(1)
+        if self.mc.is_in_position([x, y, self.camera_z, -176.1, 2.4, -125.1], 1) != 1:
+            self.mc.send_coords([x, y, self.camera_z, -176.1, 2.4, -125.1], 70, 1)
+        time.sleep(1)
 
         # open pump
-        if "dev" in self.robot_m5 or "dev" in self.robot_wio:
-            self.pump_on()
-        elif "dev" in self.robot_raspi or "dev" in self.robot_jes:
-            self.gpio_status(True)
+        self.pump_on()
         time.sleep(1.5)
 
         tmp = []
         while True:
-            if not tmp: 
-                tmp = self.mc.get_angles()    
+            if not tmp:
+                tmp = self.mc.get_angles()
             else:
                 break
         time.sleep(0.5)
-        
+
         # print(tmp)
-        self.mc.send_angles([tmp[0], 17.22, -32.51, tmp[3], 97, tmp[5]],30) # [18.8, -7.91, -54.49, -23.02, -0.79, -14.76]
+        self.mc.send_angles([tmp[0], 17.22, -32.51, tmp[3], 97, tmp[5]],
+                            50)  # [18.8, -7.91, -54.49, -23.02, -0.79, -14.76]
         self.check_position([tmp[0], 17.22, -32.51, tmp[3], 97, tmp[5]], 0)
 
-        self.mc.send_coords(self.move_coords[color], 40, 1)
- 
-        self.check_position(self.move_coords[color], 1)
-       
-        # close pump
- 
-        if "dev" in self.robot_m5 or "dev" in self.robot_wio:
-            self.pump_off()
-        elif "dev" in self.robot_raspi or "dev" in self.robot_jes:
-            self.gpio_status(False)
-        time.sleep(5)
+        self.mc.send_angles(self.new_move_coords_to_angles[color], 50)
+        self.check_position(self.new_move_coords_to_angles[color], 0)
 
-        self.mc.send_angles(self.move_angles[1], 30)
+        self.mc.send_coord(3, self.z_down_values[color], 50)
+        time.sleep(2.5)
+
+        # close pump
+        self.pump_off()
+        time.sleep(1.5)
+
+        self.mc.send_angles(self.move_angles[1], 50)
         self.check_position(self.move_angles[1], 0)
 
     # decide whether grab cube
@@ -191,25 +182,21 @@ class Object_detect():
         else:
             self.cache_x = self.cache_y = 0
             # 调整吸泵吸取位置，y增大,向左移动;y减小,向右移动;x增大,前方移动;x减小,向后方移动
-            self.move(x, y, color)
+            self.move(round(x, 2), round(y, 2), color)
 
-    # init mecharm270
+    # init mycobot280
     def run(self):
-     
-        if "dev" in self.robot_wio :
-            self.mc = MechArm270(self.robot_wio, 115200)
-        elif "dev" in self.robot_m5:
-            self.mc = MechArm270(self.robot_m5, 115200)
-        elif "dev" in self.robot_raspi:
-            self.mc = MechArm270(self.robot_raspi, 1000000)
-        self.gpio_status(False)
-        self.mc.send_angles([-33.31, 2.02, -10.72, -0.08, 95, -54.84], 30)
-        time.sleep(3)
+        self.mc = MechArm270('/dev/ttyAMA0', 1000000)
+        if self.mc.get_fresh_mode() != 0:
+            self.mc.set_fresh_mode(0)
+        self.pump_off()
+        self.mc.send_angles([-33.31, 2.02, -10.72, -0.08, 95, -54.84], 50)
+        self.check_position([-33.31, 2.02, -10.72, -0.08, 95, -54.84], 0)
 
     # draw aruco
     def draw_marker(self, img, x, y):
         # draw rectangle on img
-        cv2.rectangle( 
+        cv2.rectangle(
             img,
             (x - 20, y - 20),
             (x + 20, y + 20),
@@ -219,7 +206,7 @@ class Object_detect():
         )
         # add text on rectangle
         cv2.putText(img, "({},{})".format(x, y), (x, y),
-                    cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (243, 0, 0), 2,)
+                    cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (243, 0, 0), 2, )
 
     # get points of two aruco
     def get_calculate_params(self, img):
@@ -257,21 +244,22 @@ class Object_detect():
         self.y2 = int(y2)
         print(self.x1, self.y1, self.x2, self.y2)
 
-    # set parameters to calculate the coords between cube and mecharm270
+    # set parameters to calculate the coords between cube and mycobot280
     def set_params(self, c_x, c_y, ratio):
         self.c_x = c_x
         self.c_y = c_y
-        self.ratio = 220.0/ratio
+        self.ratio = 235.0 / ratio
 
-    # calculate the coords between cube and mecharm270
+    # calculate the coords between cube and mycobot280
     def get_position(self, x, y):
-        return ((y - self.c_y)*self.ratio + self.camera_x), ((x - self.c_x)*self.ratio + self.camera_y)
+        return ((y - self.c_y) * self.ratio + self.camera_x), ((x - self.c_x) * self.ratio + self.camera_y)
 
     """
     Calibrate the camera according to the calibration parameters.
     Enlarge the video pixel by 1.5 times, which means enlarge the video size by 1.5 times.
     If two ARuco values have been calculated, clip the video.
     """
+
     def transform_frame(self, frame):
         # enlarge the image by 1.5 times
         fx = 1.5
@@ -280,21 +268,21 @@ class Object_detect():
                            interpolation=cv2.INTER_CUBIC)
         if self.x1 != self.x2:
             # the cutting ratio here is adjusted according to the actual situation
-            frame = frame[int(self.y2*0.78):int(self.y1*1.1),
-                          int(self.x1*0.86):int(self.x2*1.08)]
+            frame = frame[int(self.y2 * 0.66):int(self.y1 * 1.1),
+                    int(self.x1 * 0.86):int(self.x2 * 1.08)]
         return frame
-    
+
     # 检测物体的形状
-    def shape_detect(self,img):
+    def shape_detect(self, img):
         x = 0
         y = 0
         Alpha = 65.6
-        Gamma=-8191.5
-        cal = cv2.addWeighted(img, Alpha,img, 0, Gamma)
+        Gamma = -8191.5
+        cal = cv2.addWeighted(img, Alpha, img, 0, Gamma)
         gray = cv2.cvtColor(cal, cv2.COLOR_BGR2GRAY)
-    
+
         # 转换为灰度图片
-        #ray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+        # ray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
 
         # a etching operation on a picture to remove edge roughness
         erosion = cv2.erode(gray, np.ones((2, 2), np.uint8), iterations=2)
@@ -303,23 +291,20 @@ class Object_detect():
         dilation = cv2.dilate(erosion, np.ones(
             (1, 1), np.uint8), iterations=2)
 
-
         # 设定灰度图的阈值 175, 255
         _, threshold = cv2.threshold(dilation, 175, 255, cv2.THRESH_BINARY)
         # 边缘检测
-        edges = cv2.Canny(threshold,50,100)
+        edges = cv2.Canny(threshold, 50, 100)
         # 检测物体边框
-        contours,_ = cv2.findContours(
+        contours, _ = cv2.findContours(
             edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-        
 
-
-        if len(contours)>0:
+        if len(contours) > 0:
             for cnt in contours:
                 # if 6000>cv2.contourArea(cnt) and cv2.contourArea(cnt)>4500:
-                if cv2.contourArea(cnt)>5500:
+                if cv2.contourArea(cnt) > 6900:
                     objectType = None
-                    peri = cv2.arcLength(cnt,True)
+                    peri = cv2.arcLength(cnt, True)
                     approx = cv2.approxPolyDP(cnt, 0.02 * peri, True)
                     objCor = len(approx)
                     x, y, w, h = cv2.boundingRect(approx)
@@ -328,8 +313,8 @@ class Object_detect():
                         box
                         for box in [cv2.boundingRect(c) for c in contours]
                         if min(img.shape[0], img.shape[1]) / 10
-                        < min(box[2], box[3])
-                        < min(img.shape[0], img.shape[1]) / 1
+                           < min(box[2], box[3])
+                           < min(img.shape[0], img.shape[1]) / 1
                     ]
                     if boxes:
                         for box in boxes:
@@ -343,70 +328,59 @@ class Object_detect():
                         x = int(rect[0][0])
                         y = int(rect[0][1])
 
-                    if objCor==3:
-                        objectType = ["Triangle","三角形"]
+                    if objCor == 3:
+                        objectType = "Triangle(三角形)"
                         cv2.drawContours(img, [cnt], 0, (0, 0, 255), 3)
-                        self.color = 2
-                    elif objCor==4:
+                        self.color = 3
+                    elif objCor == 4:
                         box = cv2.boxPoints(rect)
                         box = np.int0(box)
                         _W = math.sqrt(math.pow((box[0][0] - box[1][0]), 2) + math.pow((box[0][1] - box[1][1]), 2))
                         _H = math.sqrt(math.pow((box[0][0] - box[3][0]), 2) + math.pow((box[0][1] - box[3][1]), 2))
-                        aspRatio = _W/float(_H)
+                        aspRatio = _W / float(_H)
                         if 0.98 < aspRatio < 1.03:
-                            objectType = ["Square","正方形"]
+                            objectType = "Square(正方形)"
                             cv2.drawContours(img, [cnt], 0, (0, 0, 255), 3)
-                            self.color= 1
+                            self.color = 1
                         else:
-                            objectType = ["Rectangle","长方形"]
+                            objectType = "Rectangle(长方形)"
                             cv2.drawContours(img, [cnt], 0, (0, 0, 255), 3)
-                            self.color= 3
-                    elif objCor>=5:
-                        objectType = ["Circle", "圆形"]
-                        self.color= 0
+                            self.color = 2
+                    elif objCor >= 5:
+                        objectType = "Circle(圆形)"
+                        self.color = 0
                         cv2.drawContours(img, [cnt], 0, (0, 0, 255), 3)
                     else:
                         pass
-                    print(f"shape is {objectType[0]}(形状为{objectType[1]})")
+                    print(objectType)
 
         if abs(x) + abs(y) > 0:
             return x, y
         else:
             return None
 
-        
+
 if __name__ == "__main__":
 
     # open the camera
-    if platform.system() == "Windows":
-        cap_num = 1
-        # cap = cv2.VideoCapture(cap_num, cv2.CAP_V4L)
-        cap = cv2.VideoCapture(cap_num)
-        cap.set(3, 640)
-        cap.set(4, 480)
-        if not cap.isOpened():
-            cap.open(1)
-    elif platform.system() == "Linux":
-        cap_num = 0
-        # cap = cv2.VideoCapture(cap_num, cv2.CAP_V4L)
-        cap = cv2.VideoCapture(cap_num)
-        cap.set(3, 640)
-        cap.set(4, 480)
-        if not cap.isOpened():
-            cap.open()
-            
+    cap_num = 0
+    cap = cv2.VideoCapture(cap_num, cv2.CAP_V4L)
+    cap.set(3, 640)
+    cap.set(4, 480)
+    if not cap.isOpened():
+        cap.open()
     # init a class of Object_detect
     detect = Object_detect()
-    # init mecharm270
+    # init mycobot280
     detect.run()
 
-    _init_ = 20  
+    _init_ = 20
     init_num = 0
     nparams = 0
     num = 0
     real_sx = real_sy = 0
     while cv2.waitKey(1) < 0:
-       # read camera
+        # read camera
         _, frame = cap.read()
         # deal img
         frame = detect.transform_frame(frame)
@@ -431,16 +405,16 @@ if __name__ == "__main__":
                 continue
         elif init_num == 20:
             detect.set_cut_params(
-                (detect.sum_x1)/20.0,
-                (detect.sum_y1)/20.0,
-                (detect.sum_x2)/20.0,
-                (detect.sum_y2)/20.0,
+                (detect.sum_x1) / 20.0,
+                (detect.sum_y1) / 20.0,
+                (detect.sum_x2) / 20.0,
+                (detect.sum_y2) / 20.0,
             )
             detect.sum_x1 = detect.sum_x2 = detect.sum_y1 = detect.sum_y2 = 0
             init_num += 1
             continue
 
-        # calculate params of the coords between cube and mecharm270
+        # calculate params of the coords between cube and mycobot280
         if nparams < 10:
             if detect.get_calculate_params(frame) is None:
                 cv2.imshow("figure", frame)
@@ -457,12 +431,12 @@ if __name__ == "__main__":
                 continue
         elif nparams == 10:
             nparams += 1
-            # calculate and set params of calculating real coord between cube and mecharm270
+            # calculate and set params of calculating real coord between cube and mycobot280
             detect.set_params(
-                (detect.sum_x1+detect.sum_x2)/20.0,
-                (detect.sum_y1+detect.sum_y2)/20.0,
-                abs(detect.sum_x1-detect.sum_x2)/10.0 +
-                abs(detect.sum_y1-detect.sum_y2)/10.0
+                (detect.sum_x1 + detect.sum_x2) / 20.0,
+                (detect.sum_y1 + detect.sum_y2) / 20.0,
+                abs(detect.sum_x1 - detect.sum_x2) / 10.0 +
+                abs(detect.sum_y1 - detect.sum_y2) / 10.0
             )
             print("ok")
             continue
@@ -477,11 +451,11 @@ if __name__ == "__main__":
             continue
         else:
             x, y = detect_result
-            # calculate real coord between cube and mecharm270
+            # calculate real coord between cube and mycobot280
             real_x, real_y = detect.get_position(x, y)
             if num == 20:
-                
-                detect.decide_move(real_sx/20.0, real_sy/20.0, detect.color)
+
+                detect.decide_move(real_sx / 20.0, real_sy / 20.0, detect.color)
                 num = real_sx = real_sy = 0
 
             else:

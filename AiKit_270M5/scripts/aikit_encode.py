@@ -9,13 +9,21 @@ import serial
 import serial.tools.list_ports
 from pymycobot.mecharm270 import MechArm270
 
+from offset_utils import load_offset_from_txt
+
 # y轴偏移量
 pump_y = -55
 # x轴偏移量
 pump_x = 15
 
-class Detect_marker():
-    def __init__(self, x_offset=215, y_offset=15):
+offset_path = '/home/er/AiKit_UI/libraries/offset/mechArm 270 for M5_encode.txt'
+
+camera_x, camera_y, camera_z = load_offset_from_txt(offset_path)
+
+
+class Object_detect():
+
+    def __init__(self, x_offset=camera_x, y_offset=camera_y):
         
         # set cache of real coord
         self.cache_x = self.cache_y = 0
@@ -56,6 +64,7 @@ class Detect_marker():
              2.57018000e+00]]))
         self.x_offset = x_offset
         self.y_offset = y_offset
+        self.camera_z = camera_z
     
     # 控制吸泵      
     def pub_pump(self, flag):
@@ -114,10 +123,11 @@ class Detect_marker():
 
         coords = [
             [-52.64, 35.06, -39.63, -2.28, 82.35, 55.45],  # D
-            [-34.18, 60.9, -69.08, -0.96, 70.04, 88.06],  # C
+            [-35.59, 61.78, -68.2, -1.14, 68.29, 88.33],  # C
             [32.34, 58.35, -62.13, 4.3, 61.52, 15.64],  # A
             [55.19, 42.71, -46.4, -0.96, 84.19, 15.99]  # B
         ]
+        z_down_values = [125, 130, 135, 125]  # D, C, A, B
         print('real_x, real_y:', round(x, 2), round(y, 2))
         if x > 206:
             print('The object is too far away and the target point cannot be reached. Please reposition the identifiable object!')
@@ -128,13 +138,13 @@ class Detect_marker():
 
         self.mc.send_coords([x,y, 150, -176.1, 2.4, -125.1], 70, 1)
 
-        self.mc.send_coords([x,y, 115, -176.1, 2.4, -125.1], 70, 1)
+        self.mc.send_coords([x,y, self.camera_z, -176.1, 2.4, -125.1], 70, 1)
 
         # self.check_position([x,y, 150, -176.1, 2.4, -125.1], 1)
         while self.mc.is_moving():
             time.sleep(0.2)
-        if self.mc.is_in_position([x,y, 115, -176.1, 2.4, -125.1], 1) != 1:
-            self.mc.send_coords([x,y, 115, -176.1, 2.4, -125.1], 70, 1)
+        if self.mc.is_in_position([x,y, self.camera_z, -176.1, 2.4, -125.1], 1) != 1:
+            self.mc.send_coords([x,y, self.camera_z, -176.1, 2.4, -125.1], 70, 1)
         time.sleep(1)
         # open pump
         self.pub_pump(True)
@@ -154,7 +164,9 @@ class Detect_marker():
         # 抓取后放置区域
         self.mc.send_angles(coords[color], 50)
         self.check_position(coords[color], 0)
-   
+
+        self.mc.send_coord(3, z_down_values[color], 50)
+        time.sleep(1.5)
         # close pump
         self.pub_pump(False)
         time.sleep(5)

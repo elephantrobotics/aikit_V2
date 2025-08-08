@@ -290,7 +290,7 @@ class Object_detect():
             for cnt in contours:
                 # if 6000>cv2.contourArea(cnt) and cv2.contourArea(cnt)>4500:
                 # if cv2.contourArea(cnt) > 5500:
-                if cv2.contourArea(cnt) > 6000:
+                if cv2.contourArea(cnt) > 6900:
                     objectType = None
                     peri = cv2.arcLength(cnt, True)
                     approx = cv2.approxPolyDP(cnt, 0.02 * peri, True)

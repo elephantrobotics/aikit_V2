@@ -16,10 +16,10 @@ from pynput import keyboard
 current_process = None
 
 # 固定路径（适配当前设备）
-BASE_DIR = "/home/er/aikit_V2/AiKit_280PI/scripts"  # ← 替换 XXX 为当前机型，如 AiKit_280M5
+BASE_DIR = "/home/er/aikit_V2/AiKit_270Pi/scripts"  # ← 替换 XXX 为当前机型，如 AiKit_280M5
 HANDLE_DIR = "/home/er/aikit_V2/handle_control"
 UI_PATH = "/home/er/AiKit_UI/main.py"
-DEVICE_KEY = "280PI"  # ← 替换为当前机型编号，如 260M5、270M5
+DEVICE_KEY = "270PI"  # ← 替换为当前机型编号，如 260M5、270M5
 
 # 启动脚本函数
 def run_script(script_path, use_sudo=False):
@@ -76,6 +76,6 @@ def on_press(key):
 
 # 主程序
 if __name__ == '__main__':
-    print("等待键盘输入 (1-5: 算法功能, 6: UI, 7: 手柄控制)，按 Esc 退出")
+    print("等待键盘输入 (1-5: 识别算法功能, 6: 启动AiKit_UI, 7: 启动手柄控制)，按 Esc 退出")
     with keyboard.Listener(on_press=on_press) as listener:
         listener.join()

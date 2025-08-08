@@ -11,13 +11,20 @@ import serial
 import serial.tools.list_ports
 from pymycobot.mecharm270 import MechArm270
 
+from offset_utils import load_offset_from_txt
+
 IS_CV_4 = cv2.__version__[0] == '4'
 __version__ = "1.0"  # Adaptive seeed
 
 
+offset_path = '/home/er/AiKit_UI/libraries/offset/mechArm 270 for M5_yolov5.txt'
+
+camera_x, camera_y, camera_z = load_offset_from_txt(offset_path)
+
+
 class Object_detect():
 
-    def __init__(self, camera_x = 185, camera_y = 0):
+    def __init__(self, camera_x=camera_x, camera_y=camera_y):
         # inherit the parent class
         super(Object_detect, self).__init__()
 
@@ -36,10 +43,11 @@ class Object_detect():
 
         self.new_move_coords_to_angles = [
             [-52.64, 35.06, -39.63, -2.28, 82.35, 55.45],  # D
-            [-34.18, 60.9, -69.08, -0.96, 70.04, 88.06],  # C
+            [-35.59, 61.78, -68.2, -1.14, 68.29, 88.33],  # C
             [32.34, 58.35, -62.13, 4.3, 61.52, 15.64],  # A
             [55.19, 42.71, -46.4, -0.96, 84.19, 15.99]  # B
         ]
+        self.z_down_values = [125, 130, 135, 125]  # D, C, A, B
    
         # choose place to set cube
         self.color = 0
@@ -92,6 +100,8 @@ class Object_detect():
         self.classes = None
         with open(classesFile, 'rt') as f:
             self.classes = f.read().rstrip('\n').split('\n')
+            
+        self.camera_z = camera_z
 
     # 开启吸泵 m5
     def pump_on(self):
@@ -155,12 +165,12 @@ class Object_detect():
         # send coordinates to move mycobot
         self.mc.send_coords([x, y, 150, -176.1, 2.4, -125.1], 70, 1) # usb :rx,ry,rz -173.3, -5.48, -57.9
 
-        self.mc.send_coords([x, y, 115, -176.1, 2.4, -125.1], 70, 1)
-        # self.check_position([x, y, 115, -176.1, 2.4, -125.1], 1)
+        self.mc.send_coords([x, y, self.camera_z, -176.1, 2.4, -125.1], 70, 1)
+        # self.check_position([x, y, self.camera_z, -176.1, 2.4, -125.1], 1)
         while self.mc.is_moving():
             time.sleep(0.2)
-        if self.mc.is_in_position([x,y, 115, -176.1, 2.4, -125.1], 1) != 1:
-            self.mc.send_coords([x,y, 115, -176.1, 2.4, -125.1], 70, 1)
+        if self.mc.is_in_position([x,y, self.camera_z, -176.1, 2.4, -125.1], 1) != 1:
+            self.mc.send_coords([x,y, self.camera_z, -176.1, 2.4, -125.1], 70, 1)
         time.sleep(1)
         # open pump
         self.pump_on()       
@@ -181,6 +191,8 @@ class Object_detect():
         self.mc.send_angles(self.new_move_coords_to_angles[color], 50)
         self.check_position(self.new_move_coords_to_angles[color], 0)
 
+        self.mc.send_coord(3, self.z_down_values[color], 50)
+        time.sleep(1.5)
         # close pump
         self.pump_off()
         time.sleep(2)

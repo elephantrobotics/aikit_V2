@@ -10,13 +10,20 @@ import cv2
 import numpy as np
 from pymycobot.mecharm270 import MechArm270
 
+from offset_utils import load_offset_from_txt
+
 IS_CV_4 = cv2.__version__[0] == '4'
 __version__ = "1.0"  # Adaptive seeed
 
 
+offset_path = '/home/er/AiKit_UI/libraries/offset/mechArm 270 for Pi_yolov5.txt'
+
+camera_x, camera_y, camera_z = load_offset_from_txt(offset_path)
+
+
 class Object_detect():
 
-    def __init__(self, camera_x=185, camera_y=0):
+    def __init__(self, camera_x=camera_x, camera_y=camera_y):
         # inherit the parent class
         super(Object_detect, self).__init__()
 
@@ -92,6 +99,8 @@ class Object_detect():
         GPIO.setmode(GPIO.BCM)
         GPIO.setup(20, GPIO.OUT)
         GPIO.setup(21, GPIO.OUT)
+        
+        self.camera_z = camera_z
 
     # 开启吸泵
     def pump_on(self):
@@ -154,12 +163,12 @@ class Object_detect():
         # send coordinates to move mycobot
         self.mc.send_coords([x, y, 150, -176.1, 2.4, -125.1], 70, 1)  # usb :rx,ry,rz -173.3, -5.48, -57.9
 
-        self.mc.send_coords([x, y, 115, -176.1, 2.4, -125.1], 70, 1)
-        # self.check_position([x, y, 115, -176.1, 2.4, -125.1], 1)
+        self.mc.send_coords([x, y, self.camera_z, -176.1, 2.4, -125.1], 70, 1)
+        # self.check_position([x, y, self.camera_z, -176.1, 2.4, -125.1], 1)
         while self.mc.is_moving():
             time.sleep(0.2)
-        if self.mc.is_in_position([x, y, 115, -176.1, 2.4, -125.1], 1) != 1:
-            self.mc.send_coords([x, y, 115, -176.1, 2.4, -125.1], 70, 1)
+        if self.mc.is_in_position([x, y, self.camera_z, -176.1, 2.4, -125.1], 1) != 1:
+            self.mc.send_coords([x, y, self.camera_z, -176.1, 2.4, -125.1], 70, 1)
         time.sleep(1)
         # open pump
         self.pump_on()

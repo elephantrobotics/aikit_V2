@@ -11,15 +11,19 @@ import serial.tools.list_ports
 
 from pymycobot.mecharm270 import MechArm270
 
+from offset_utils import load_offset_from_txt
 
 IS_CV_4 = cv2.__version__[0] == '4'
 __version__ = "1.0"
-# Adaptive seeed
+
+offset_path = '/home/er/AiKit_UI/libraries/offset/mechArm 270 for M5_shape.txt'
+
+camera_x, camera_y, camera_z = load_offset_from_txt(offset_path)
 
 
 class Object_detect():
 
-    def __init__(self, camera_x = 150, camera_y = 5):
+    def __init__(self, camera_x=camera_x, camera_y=camera_y):
         # inherit the parent class
         super(Object_detect, self).__init__()
         # declare mecharm270
@@ -35,13 +39,14 @@ class Object_detect():
             [-33.31, 2.02, -10.72, -0.08, 95, -54.84],  # point to grab
         ]
 
-        # 移动坐标
-        self.move_coords = [
-            [96.5, -101.9, 185.6, 155.25, 19.14, 75.88], # above the red bucket
-            [180.9, -99.3, 184.6, 124.4, 30.9, 80.58], # above the green bucket
-            [77.4, 122.1, 179.2, 151.66, 17.94, 178.24],# above the blue bucket
-            [2.2, 128.5, 171.6, 163.27, 10.58, -147.25] # yellow
+        self.new_move_coords_to_angles = [
+            [-52.64, 35.06, -39.63, -2.28, 82.35, 55.45],  # D
+            [-35.59, 61.78, -68.2, -1.14, 68.29, 88.33],  # C
+            [32.34, 58.35, -62.13, 4.3, 61.52, 15.64],  # A
+            [55.19, 42.71, -46.4, -0.96, 84.19, 15.99]  # B
         ]
+
+        self.z_down_values = [100, 105, 110, 100]  # D, C, A, B
         
         # choose place to set cube
         self.color = 0
@@ -64,23 +69,28 @@ class Object_detect():
         self.aruco_params = cv2.aruco.DetectorParameters_create()
         
         # 初始化背景减法器
-        self.mog =cv2.bgsegm.createBackgroundSubtractorMOG() 
+        self.mog =cv2.bgsegm.createBackgroundSubtractorMOG()
+
+        self.camera_z = camera_z
     
     # 开启吸泵 m5
     def pump_on(self):
-        # 让2号位工作
-        # self.mc.set_basic_output(2, 0)
         # 让5号位工作
         self.mc.set_basic_output(5, 0)
+        time.sleep(0.05)
 
     # 停止吸泵 m5
     def pump_off(self):
-        # 让2号位停止工作
-        self.mc.set_basic_output(2, 1)
+
         # 让5号位停止工作
         self.mc.set_basic_output(5, 1)
+        time.sleep(0.05)
+        self.mc.set_basic_output(2, 0)
+        time.sleep(0.05)
+        self.mc.set_basic_output(2, 1)
+        time.sleep(0.05)
 
-    def check_position(self, data, ids):
+    def check_position(self, data, ids, max_same_data_count=50):
         """
         循环检测是否到位某个位置
         :param data: 角度或者坐标
@@ -88,11 +98,23 @@ class Object_detect():
         :return:
         """
         try:
+            same_data_count = 0
+            last_data = None
+            start_time = time.time()
             while True:
+                # 超时检测
+                if (time.time() - start_time) >= 5:
+                    break
                 res = self.mc.is_in_position(data, ids)
-                # print('res', res)
-                if res == 1:
-                    time.sleep(0.1)
+                # print('res', res, data)
+                if data == last_data:
+                    same_data_count += 1
+                else:
+                    same_data_count = 0
+
+                last_data = data
+                # print('count:', same_data_count)
+                if res == 1 or same_data_count >= max_same_data_count:
                     break
                 time.sleep(0.1)
         except Exception as e:
@@ -102,19 +124,26 @@ class Object_detect():
     # Grasping motion
     def move(self, x, y, color):
         # send Angle to move mecharm270
-        print(color)
-        self.mc.send_angles(self.move_angles[0], 30)
+        print(color, 'real_x: ', x, 'real_y: ', y)
+        if x < 235:
+            self.camera_z -=5
+        if x > 206:
+            print(
+                'The object is too far away and the target point cannot be reached. Please reposition the identifiable object!')
+            return
+        self.mc.send_angles(self.move_angles[0], 50)
         self.check_position(self.move_angles[0], 0)
 
         # send coordinates to move mycobot
-        self.mc.send_coords([x, y,  110, -176.1, 2.4, -125.1], 40, 1) # usb :rx,ry,rz -173.3, -5.48, -57.9
-
-        
-        # self.mc.send_coords([x, y, 150, 179.87, -3.78, -62.75], 25, 0)
-        # time.sleep(3)
-
-        self.mc.send_coords([x, y, 70, -176.1, 2.4, -125.1], 40, 1)
-        self.check_position([x, y, 70, -176.1, 2.4, -125.1], 1)
+        self.mc.send_coords([x, y, 150, -176.1, 2.4, -125.1], 70, 1)  # usb :rx,ry,rz -173.3, -5.48, -57.9
+        self.mc.send_coords([x, y, self.camera_z, -176.1, 2.4, -125.1], 70, 1)  # -178.77, -2.69, 40.15     pi
+        # self.check_position([x, y, self.camera_z, -176.1, 2.4, -125.1], 1)
+        while self.mc.is_moving():
+            time.sleep(0.2)
+        time.sleep(1)
+        if self.mc.is_in_position([x, y, self.camera_z, -176.1, 2.4, -125.1], 1) != 1:
+            self.mc.send_coords([x, y, self.camera_z, -176.1, 2.4, -125.1], 70, 1)
+        time.sleep(1)
 
         # open pump
         self.pump_on()
@@ -129,19 +158,20 @@ class Object_detect():
         time.sleep(0.5)
         
         # print(tmp)
-        self.mc.send_angles([tmp[0], 17.22, -32.51, tmp[3], 97, tmp[5]],30) # [18.8, -7.91, -54.49, -23.02, -0.79, -14.76]
+        self.mc.send_angles([tmp[0], 17.22, -32.51, tmp[3], 97, tmp[5]],50) # [18.8, -7.91, -54.49, -23.02, -0.79, -14.76]
         self.check_position([tmp[0], 17.22, -32.51, tmp[3], 97, tmp[5]], 0)
 
-        self.mc.send_coords(self.move_coords[color], 40, 1)
- 
-        self.check_position(self.move_coords[color], 1)
+        self.mc.send_angles(self.new_move_coords_to_angles[color], 50)
+        self.check_position(self.new_move_coords_to_angles[color], 0)
+
+        self.mc.send_coord(3, self.z_down_values[color], 50)
+        time.sleep(2.5)
        
         # close pump
- 
         self.pump_off()
-        time.sleep(5)
+        time.sleep(1.5)
 
-        self.mc.send_angles(self.move_angles[1], 30)
+        self.mc.send_angles(self.move_angles[1], 50)
         self.check_position(self.move_angles[1], 0)
 
     # decide whether grab cube
@@ -154,12 +184,15 @@ class Object_detect():
         else:
             self.cache_x = self.cache_y = 0
             # 调整吸泵吸取位置，y增大,向左移动;y减小,向右移动;x增大,前方移动;x减小,向后方移动
-            self.move(x, y, color)
+            self.move(round(x, 2), round(y, 2), color)
 
     # init mecharm270
     def run(self):
         self.mc = MechArm270(self.plist[0], 115200)
-        self.mc.send_angles([-33.31, 2.02, -10.72, -0.08, 95, -54.84], 30)
+        if self.mc.get_fresh_mode() != 0:
+            self.mc.set_fresh_mode(0)
+        self.pump_off()
+        self.mc.send_angles([-33.31, 2.02, -10.72, -0.08, 95, -54.84], 50)
         self.check_position([-33.31, 2.02, -10.72, -0.08, 95, -54.84], 0)
 
     # draw aruco
@@ -217,7 +250,7 @@ class Object_detect():
     def set_params(self, c_x, c_y, ratio):
         self.c_x = c_x
         self.c_y = c_y
-        self.ratio = 220.0/ratio
+        self.ratio = 235.0/ratio
 
     # calculate the coords between cube and mecharm270
     def get_position(self, x, y):
@@ -236,7 +269,7 @@ class Object_detect():
                            interpolation=cv2.INTER_CUBIC)
         if self.x1 != self.x2:
             # the cutting ratio here is adjusted according to the actual situation
-            frame = frame[int(self.y2*0.78):int(self.y1*1.1),
+            frame = frame[int(self.y2*0.66):int(self.y1*1.1),
                           int(self.x1*0.86):int(self.x2*1.08)]
         return frame
     
@@ -273,7 +306,7 @@ class Object_detect():
         if len(contours)>0:
             for cnt in contours:
                 # if 6000>cv2.contourArea(cnt) and cv2.contourArea(cnt)>4500:
-                if cv2.contourArea(cnt)>5500:
+                if cv2.contourArea(cnt)>6900:
                     objectType = None
                     peri = cv2.arcLength(cnt,True)
                     approx = cv2.approxPolyDP(cnt, 0.02 * peri, True)
@@ -336,16 +369,14 @@ if __name__ == "__main__":
     # open the camera
     if platform.system() == "Windows":
         cap_num = 1
-        # cap = cv2.VideoCapture(cap_num, cv2.CAP_V4L)
-        cap = cv2.VideoCapture(cap_num)
+        cap = cv2.VideoCapture(cap_num, cv2.CAP_DSHOW)
         cap.set(3, 640)
         cap.set(4, 480)
         if not cap.isOpened():
             cap.open(1)
     elif platform.system() == "Linux":
         cap_num = 0
-        # cap = cv2.VideoCapture(cap_num, cv2.CAP_V4L)
-        cap = cv2.VideoCapture(cap_num)
+        cap = cv2.VideoCapture(cap_num, cv2.CAP_V4L)
         cap.set(3, 640)
         cap.set(4, 480)
         if not cap.isOpened():

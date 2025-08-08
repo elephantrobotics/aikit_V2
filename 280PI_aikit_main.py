@@ -76,6 +76,6 @@ def on_press(key):
 
 # 主程序
 if __name__ == '__main__':
-    print("等待键盘输入 (1-5: 算法功能, 6: UI, 7: 手柄控制)，按 Esc 退出")
+    print("等待键盘输入 (1-5: 识别算法功能, 6: 启动AiKit_UI, 7: 启动手柄控制)，按 Esc 退出")
     with keyboard.Listener(on_press=on_press) as listener:
         listener.join()
