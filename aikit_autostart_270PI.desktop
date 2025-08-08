@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Exec=/home/er/aikit_V2/start_aikit_270PI.sh
+Hidden=false
+X-MATE-Autostart-enabled=true
+Name[en_US]=AiKit APP
+Name=AiKit_App
+Comment[en_US]=
+Comment=
+X-MATE-Autostart-Delay=0
