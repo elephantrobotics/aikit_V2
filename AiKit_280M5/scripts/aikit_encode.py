@@ -2,7 +2,7 @@
 import platform
 import time
 import traceback
-
+import os
 import cv2
 import numpy as np
 import serial
@@ -16,7 +16,7 @@ pump_y = -55
 # x轴偏移量
 pump_x = 15
 
-offset_path = '/home/er/AiKit_UI/libraries/offset/myCobot 280 for M5_encode.txt'
+offset_path = os.path.expanduser('~/AiKit_UI/libraries/offset/myCobot 280 for M5_encode.txt')
 
 camera_x, camera_y, camera_z = load_offset_from_txt(offset_path)
 

@@ -1,7 +1,7 @@
 import platform
 import sys
 import time
-
+import os
 import cv2
 import numpy as np
 import serial
@@ -18,7 +18,7 @@ IS_CV_4 = cv2.__version__[0] == '4'
 __version__ = "1.0"
 
 
-offset_path = '/home/er/AiKit_UI/libraries/offset/myPalletizer 260 for M5_color.txt'
+offset_path = os.path.expanduser('~/AiKit_UI/libraries/offset/myPalletizer 260 for M5_color.txt')
 
 camera_x, camera_y, camera_z = load_offset_from_txt(offset_path)
 

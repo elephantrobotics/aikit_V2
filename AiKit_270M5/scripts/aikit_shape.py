@@ -16,7 +16,7 @@ from offset_utils import load_offset_from_txt
 IS_CV_4 = cv2.__version__[0] == '4'
 __version__ = "1.0"
 
-offset_path = '/home/er/AiKit_UI/libraries/offset/mechArm 270 for M5_shape.txt'
+offset_path = os.path.expanduser('~/AiKit_UI/libraries/offset/mechArm 270 for M5_shape.txt')
 
 camera_x, camera_y, camera_z = load_offset_from_txt(offset_path)
 
