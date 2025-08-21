@@ -102,11 +102,17 @@ Follow the terminal prompts and select the corresponding robot arm model. If you
 Keyboard Input:
 
 `1`: Enables color recognition.
+
 `2`: Enables shape recognition.
+
 `3`: Enables AR QR code recognition.
+
 `4`: Enables feature point image recognition.
+
 `5`: Enables YOLOv5 recognition.
+
 `6`: Enables the AiKit_UI graphical software, allowing you to directly use various recognition algorithms.
+
 `7`: Enables controller control. After startup, switch your keyboard and mouse to controller mode. For controller button usage, refer to [Function Button Usage](https://docs.elephantrobotics.com/docs/mycobot_280_pi_en/3-FunctionsAndApplications/6.developmentGuide/python/9_HandleControl.html).
 
 ### Notes

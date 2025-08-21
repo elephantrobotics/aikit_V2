@@ -102,11 +102,17 @@ cp aikit_autostart_260PI.desktop $HOME/.config/autostart/aikit_autostart_260PI.d
 键盘按键输入：
 
 `1`: 启动颜色识别功能。
+
 `2`: 启动形状识别功能。
+
 `3`: 启动AR二维码识别功能。
+
 `4`: 启动特征点图像识别功能。
+
 `5`: 启动yolov5识别功能。
+
 `6`: 启动AiKit_UI图形化软件功能，可直接使用各种算法识别功能。
+
 `7`: 启动手柄控制功能。启动后需将键鼠设备切换到手柄控制模式，手柄按键功能使用参考 [功能按键使用](https://docs.elephantrobotics.com/docs/mycobot_280_pi_cn/3-FunctionsAndApplications/6.developmentGuide/python/7.9_HandleControl.html)。
 
 ### 注意事项
