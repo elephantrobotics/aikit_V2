@@ -5,8 +5,6 @@ This module controls the robotic arm movements.
 Author: Wang Weijian
 Date: 2025-08-01
 """
-with open("/home/er/aikit_log.txt", "a") as f:
-    f.write("脚本在启动时运行了\n")
 
 import subprocess
 import sys
@@ -17,7 +15,7 @@ from pynput import keyboard
 current_process = None
 device_name = None
 device_key = None
-in_ui_mode = False  # UI 模式状态
+in_ui_mode = False  # UI mode state
 last_ui_exit_time = 0
 
 DEVICE_MAP = {
@@ -26,14 +24,14 @@ DEVICE_MAP = {
     '3': ('AiKit_260M5', '260M5'),
 }
 
-# 脚本路径拼接函数
+# Script path splicing function
 def get_script_path(script_name):
     if not device_name:
         print("请先选择设备！")
         return None
     return os.path.join('/home/er/aikit_V2', device_name, 'scripts', script_name)
 
-# 启动脚本函数
+# Start script function
 def run_script(script_path, use_sudo=False):
     global current_process, in_ui_mode, last_ui_exit_time
 
@@ -52,20 +50,20 @@ def run_script(script_path, use_sudo=False):
     else:
         current_process = subprocess.Popen([current_python, script_path])
 
-# 按键响应
+# Key response
 def on_press(key):
     global current_process, in_ui_mode, last_ui_exit_time
 
     try:
-        # 在 UI 退出后的 0.5 秒内忽略所有按键
+        # Ignore all key presses for 0.5 seconds after the UI exits
         if time.time() - last_ui_exit_time < 0.5:
-            # print("忽略 UI 退出瞬间的按键残留")
+            # print("Ignore the keystroke residue at the moment of UI exit")
             return
 
         if hasattr(key, 'char'):
-            # UI 模式下屏蔽算法切换
-            if in_ui_mode and key.char in ['1', '2', '3', '4', '5', '7']:
-                # print("当前在 UI 模式，忽略数字键输入")
+            # Disable algorithm switching in UI mode
+            if in_ui_mode and key.char in ['1', '2', '3', '4', '5', '7', '8', '9', '0']:
+                # print("Currently in UI mode, ignoring numeric key input")
                 return
             if key.char == '1':
                 run_script(get_script_path('aikit_color.py'), use_sudo=False)
@@ -83,13 +81,19 @@ def on_press(key):
                 if current_process:
                     current_process.wait()
                 in_ui_mode = False
-                last_ui_exit_time = time.time()  # 记录 UI 退出时间
+                last_ui_exit_time = time.time()  #Record UI exit time
                 print("UI 模式结束，恢复数字键切换功能")
             elif key.char == '7':
                 handle_path = os.path.join('/home/er/aikit_V2/handle_control', f'{device_key}_wireless_keyboard_mouse_handle_control_raspi_linux.py')
                 run_script(handle_path, use_sudo=False)
+            elif key.char == '8':
+                run_script(get_script_path('gripper_block_demo.py'), use_sudo=False)
+            elif key.char == '9':
+                run_script(get_script_path('dance_action_finger_demo.py'), use_sudo=False)
+            elif key.char == '0':
+                run_script(get_script_path('camera_detect.py'), use_sudo=False)
             else:
-                print(f"无效按键：{key.char}，请按 1-7 或 Esc")
+                print(f"无效按键：{key.char}，请按 0-9 或 Esc")
 
         elif key == keyboard.Key.esc:
             print("退出监听")
@@ -105,7 +109,7 @@ def on_press(key):
         print(f"按键监听出错: {e}")
         return False
 
-# 主程序
+
 if __name__ == '__main__':
     while True:
         print("请选择设备：")
@@ -126,6 +130,20 @@ if __name__ == '__main__':
     device_name, device_key = DEVICE_MAP[device_input]
     print(f"当前选择设备: {device_key}")
 
-    print("等待键盘输入 (1-5: 识别算法功能, 6: 启动AiKit_UI, 7: 启动手柄控制)，按 Esc 退出")
+    menu = """
+    等待键盘输入 (按 Esc 退出):
+
+      1: 颜色识别
+      2: 形状识别
+      3: AR二维码识别
+      4: 特征点图像识别
+      5: YOLOv5 图像识别
+      6: 启动 AiKit_UI
+      7: 启动手柄控制
+      8: 自适应夹爪案例
+      9: 灵巧手案例
+      0: STAG 码跟踪案例
+    """
+    print(menu)
     with keyboard.Listener(on_press=on_press) as listener:
         listener.join()

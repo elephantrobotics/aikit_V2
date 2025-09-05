@@ -1,5 +1,6 @@
 import os
 import platform
+import random
 import threading
 import time
 import traceback
@@ -52,7 +53,7 @@ class Object_detect():
         self.z_down_values = [138, 145, 147, 135]  # D, C, A, B
 
         # choose place to set cube
-        self.color = 0
+        self.color = random.randint(0, 3)
         # parameters to calculate camera clipping parameters
         self.x1 = self.x2 = self.y1 = self.y2 = 0
         # set cache of real coord
