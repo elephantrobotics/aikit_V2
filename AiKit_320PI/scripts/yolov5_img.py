@@ -6,6 +6,7 @@ import time
 import cv2
 import numpy as np
 from pymycobot.mycobot320 import MyCobot320
+from common import limit_coords
 
 IS_CV_4 = cv2.__version__[0] == '4'
 __version__ = "1.0"  # Adaptive seeed
@@ -27,11 +28,17 @@ class Object_detect():
         ]
 
         # 移动坐标
-        self.move_coords = [
-            [32, -228.3, 201.6, -168.07, -7.17, -92.56],  # D Sorting area
-            [266.5, -219.7, 209.3, -170, -3.64, -94.62],  # C Sorting area
-            [253.8, 236.8, 224.6, -170, 6.87, -77.91],  # A Sorting area
-            [35.9, 235.4, 211.8, -169.33, -9.27, 88.3],  # B Sorting area
+        # self.move_coords = [
+        #     [32, -228.3, 201.6, -168.07, -7.17, -92.56],  # D Sorting area
+        #     [266.5, -219.7, 209.3, -170, -3.64, -94.62],  # C Sorting area
+        #     [253.8, 236.8, 224.6, -170, 6.87, -77.91],  # A Sorting area
+        #     [35.9, 235.4, 211.8, -169.33, -9.27, 88.3],  # B Sorting area
+        # ]
+        self.move_coords_to_angles = [
+            [-61.61, 3.6, -100.63, 12.91, 95.44, -59.06],  # D Sorting area
+            [-25.22, -43.94, -39.9, 9.22, 90.43, -21.18],  # C Sorting area
+            [58.18, -42.89, -32.69, -1.31, 89.38, 45.52],  # A Sorting area
+            [100.1, -0.17, -95.0, 11.77, 97.64, -77.87],  # B Sorting area
         ]
 
         # which robot: USB* is m5; ACM* is wio; AMA* is raspi
@@ -135,9 +142,16 @@ class Object_detect():
         time.sleep(3)
 
         # send coordinates to move mycobot
-        self.mc.send_coords([x, y, 230, -173.84, -0.14, -74.37], 100, 1)
+        # self.mc.send_coords([x, y, 230, -173.84, -0.14, -74.37], 100, 1)
+        target1 = [x, y, 250, -173.84, -0.14, -74.37]
+        target1 = limit_coords(target1)  # <-- 自动限位
+        self.mc.send_coords(target1, 100, 1)
         time.sleep(2.5)
-        self.mc.send_coords([x, y, 100, -173.84, -0.14, -74.37], 100, 1)  #
+        # self.mc.send_coords([x, y, 100, -173.84, -0.14, -74.37], 100, 1)  #
+        target2 = [x, y, 95, -173.84, -0.14, -74.37]
+        target2 = limit_coords(target2)  # <-- 自动限位
+        self.mc.send_coords(target2, 100, 1)
+
         time.sleep(3)
         # open pump
         self.pump_on()
@@ -155,15 +169,15 @@ class Object_detect():
         self.mc.send_angles([tmp[0], -0.71, -54.49, -23.02, 89.56, tmp[5]],
                             25)  # [18.8, -7.91, -54.49, -23.02, -0.79, -14.76]
         time.sleep(3)
-        self.mc.send_coords(self.move_coords[color], 100, 1)
-        time.sleep(6.5)
+        self.mc.send_angles(self.move_coords_to_angles[color], 50)
+        time.sleep(2)
 
         # close pump
         self.pump_off()
-        time.sleep(6.5)
+        time.sleep(2.5)
 
         self.mc.send_angles(self.move_angles[0], 50)
-        time.sleep(4.5)
+        time.sleep(2.5)
         print('请按空格键打开摄像头进行下一次图像存储和识别')
         print('Please press the space bar to open the camera for the next image storage and recognition')
 

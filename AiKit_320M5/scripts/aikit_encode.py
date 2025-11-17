@@ -7,6 +7,7 @@ import numpy as np
 import serial
 import serial.tools.list_ports
 from pymycobot.mycobot320 import MyCobot320
+from common import limit_coords
 
 # y轴偏移量
 pump_y = -55
@@ -89,9 +90,15 @@ class Detect_marker():
         # send coordinates to move mycobot
         self.mc.send_angles(angles[2], 50)
         time.sleep(3)
-        self.mc.send_coords([coords[0][0] + x, coords[0][1] + y, 240, 178.99, -3.78, -62.9], 100, 1)
+        # self.mc.send_coords([coords[0][0] + x, coords[0][1] + y, 240, 178.99, -3.78, -62.9], 100, 1)
+        target1 = [coords[0][0] + x, coords[0][1] + y, 240, 178.99, -3.78, -62.9]
+        target1 = limit_coords(target1)  # <-- 自动限位
+        self.mc.send_coords(target1, 100, 1)
         time.sleep(2)
-        self.mc.send_coords([coords[0][0] + x, coords[0][1] + y, 100.5, 178.99, -3.78, -62.9], 100, 1)
+        # self.mc.send_coords([coords[0][0] + x, coords[0][1] + y, 100.5, 178.99, -3.78, -62.9], 100, 1)
+        target2 = [coords[0][0] + x, coords[0][1] + y, 95, 178.99, -3.78, -62.9]
+        target2 = limit_coords(target2)  # <-- 自动限位
+        self.mc.send_coords(target2, 100, 1)
         time.sleep(2.5)
 
         # open pump
@@ -115,7 +122,7 @@ class Detect_marker():
 
         # close pump
         self.pub_pump(False)
-        time.sleep(6.5)
+        time.sleep(2.5)
 
         self.mc.send_angles(angles[0], 50)
         time.sleep(2)

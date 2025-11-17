@@ -10,6 +10,7 @@ import numpy as np
 import serial
 import serial.tools.list_ports
 from pymycobot.mycobot320 import MyCobot320
+from common import limit_coords
 
 IS_CV_4 = cv2.__version__[0] == '4'
 __version__ = "1.0"
@@ -83,9 +84,15 @@ class Object_detect():
         self.gripper_on()
         time.sleep(0.5)
         # send coordinates to move mycobot
-        self.mc.send_coords([x, y, 250, 176.53, -4.21, 53.28], 100, 1)
-        self.mc.send_coords([x, y, 203, 176.53, -4.21, 53.28], 100, 1)
-        self.check_position([x, y, 195, 176.53, -4.21, 53.28], 1)
+        # self.mc.send_coords([x, y, 250, 176.53, -4.21, 53.28], 100, 1)
+        target1 = [x, y, 250, 176.53, -4.21, 53.28]
+        target1 = limit_coords(target1)  # <-- 自动限位
+        self.mc.send_coords(target1, 100, 1)
+        # self.mc.send_coords([x, y, 203, 176.53, -4.21, 53.28], 100, 1)
+        target2 = [x, y,  203, 176.53, -4.21, 53.28]
+        target2 = limit_coords(target1)  # <-- 自动限位
+        self.mc.send_coords(target2, 100, 1)
+        self.check_position(target2, 1)
         # close gripper
         self.gripper_off()
 

@@ -8,6 +8,7 @@ import numpy as np
 import serial
 import serial.tools.list_ports
 from pymycobot.mycobot320 import MyCobot320
+from common import limit_coords
 
 IS_CV_4 = cv2.__version__[0] == '4'
 __version__ = "1.0"
@@ -32,11 +33,17 @@ class Object_detect():
         ]
 
         # 移动坐标
-        self.move_coords = [
-            [30.3, -214.9, 302.3, -169.77, -8.64, -91.55],  # D Sorting area
-            [240.3, -202.2, 317.1, -152.12, -10.15, -95.73],  # C Sorting area
-            [244.5, 193.2, 330.3, -160.54, 17.35, -74.59],  # A Sorting area
-            [33.2, 205.3, 322.5, -170.22, -13.93, 92.28],  # B Sorting area
+        # self.move_coords = [
+        #     [30.3, -214.9, 302.3, -169.77, -8.64, -91.55],  # D Sorting area
+        #     [240.3, -202.2, 317.1, -152.12, -10.15, -95.73],  # C Sorting area
+        #     [244.5, 193.2, 330.3, -160.54, 17.35, -74.59],  # A Sorting area
+        #     [33.2, 205.3, 322.5, -170.22, -13.93, 92.28],  # B Sorting area
+        # ]
+        self.move_coords_to_angles = [
+            [-61.61, 3.6, -100.63, 12.91, 95.44, -59.06],  # D Sorting area
+            [-25.22, -43.94, -39.9, 9.22, 90.43, -21.18],  # C Sorting area
+            [58.18, -42.89, -32.69, -1.31, 89.38, 45.52],  # A Sorting area
+            [100.1, -0.17, -95.0, 11.77, 97.64, -77.87],  # B Sorting area
         ]
 
         # choose place to set cube
@@ -93,9 +100,15 @@ class Object_detect():
         self.gripper_on()
         time.sleep(3)
         # send coordinates to move mycobot
-        self.mc.send_coords([x, y, 250, -174.51, 0.86, -85.93], 100, 1)
+        # self.mc.send_coords([x, y, 250, -174.51, 0.86, -85.93], 100, 1)
+        target1 = [x, y, 250,  -174.51, 0.86, -85.93]
+        target1 = limit_coords(target1)  # <-- 自动限位
+        self.mc.send_coords(target1, 100, 1)
         time.sleep(2.5)
-        self.mc.send_coords([x, y, 203, -174.51, 0.86, -85.93], 100, 1)
+        # self.mc.send_coords([x, y, 203, -174.51, 0.86, -85.93], 100, 1)
+        target2 = [x, y, 203, -174.51, 0.86, -85.93]
+        target2 = limit_coords(target2)  # <-- 自动限位
+        self.mc.send_coords(target2, 100, 1)
         time.sleep(3)
         # close gripper
         self.gripper_off()
@@ -115,7 +128,7 @@ class Object_detect():
                             25)  # [18.8, -7.91, -54.49, -23.02, -0.79, -14.76]
         time.sleep(3)
 
-        self.mc.send_coords(self.move_coords[color], 100, 1)
+        self.mc.send_angles(self.move_coords_to_angles[color], 50)
         time.sleep(6.5)
 
         # open gripper

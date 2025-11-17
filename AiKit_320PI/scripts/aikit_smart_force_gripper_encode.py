@@ -10,6 +10,8 @@ import serial
 import serial.tools.list_ports
 from pymycobot.mycobot320 import MyCobot320
 
+from common import limit_coords
+
 # y轴偏移量
 pump_y = -55
 # x轴偏移量
@@ -129,15 +131,19 @@ class Detect_marker():
             else:
                 break
         time.sleep(0.1)
-
-        self.mc.send_coords(
-            [self.home_coords[0] + x, self.home_coords[1] + y, 250, tmp_coords[3], tmp_coords[4], tmp_coords[5]], 100,
-            1)
-        self.mc.send_coords(
-            [self.home_coords[0] + x, self.home_coords[1] + y, 200, tmp_coords[3], tmp_coords[4], tmp_coords[5]], 100,
-            1)
-        self.check_position(
-            [self.home_coords[0] + x, self.home_coords[1] + y, 200, tmp_coords[3], tmp_coords[4], tmp_coords[5]], 1)
+        target1 = [self.home_coords[0] + x, self.home_coords[1] + y, 250, tmp_coords[3], tmp_coords[4], tmp_coords[5]]
+        target1 = limit_coords(target1)  # <-- 自动限位
+        self.mc.send_coords(target1, 100, 1)
+        # self.mc.send_coords(
+        #     [self.home_coords[0] + x, self.home_coords[1] + y, 250, tmp_coords[3], tmp_coords[4], tmp_coords[5]], 100,
+        #     1)
+        # self.mc.send_coords(
+        #     [self.home_coords[0] + x, self.home_coords[1] + y, 200, tmp_coords[3], tmp_coords[4], tmp_coords[5]], 100,
+        #     1)
+        target2 = [self.home_coords[0] + x, self.home_coords[1] + y, 200, tmp_coords[3], tmp_coords[4], tmp_coords[5]]
+        target2 = limit_coords(target2)  # <-- 自动限位
+        self.mc.send_coords(target2, 100, 1)
+        self.check_position(target2, 1)
 
         # close gripper
         self.gripper_off()

@@ -7,6 +7,7 @@ import time
 import cv2
 import numpy as np
 from pymycobot.mycobot320 import MyCobot320
+from common import limit_coords
 
 IS_CV_4 = cv2.__version__[0] == '4'
 __version__ = "1.0"
@@ -28,11 +29,17 @@ class Object_detect():
         ]
 
         # 移动坐标
-        self.move_coords = [
-            [28.9, -226, 246, -171.13, -3.94, -92.37],  # D Sorting area
-            [253.3, -216.1, 257, -163.12, -6.12, -95.27],  # C Sorting area
-            [241.8, 219.5, 270.6, -168.47, 10.42, -76.84],  # A Sorting area
-            [37.8, 233, 251.4, -170.6, -6.75, 88.53],  # B Sorting area
+        # self.move_coords = [
+        #     [28.9, -226, 246, -171.13, -3.94, -92.37],  # D Sorting area
+        #     [253.3, -216.1, 257, -163.12, -6.12, -95.27],  # C Sorting area
+        #     [241.8, 219.5, 270.6, -168.47, 10.42, -76.84],  # A Sorting area
+        #     [37.8, 233, 251.4, -170.6, -6.75, 88.53],  # B Sorting area
+        # ]
+        self.move_coords_to_angles = [
+            [-61.61, 3.6, -100.63, 12.91, 95.44, -59.06],  # D Sorting area
+            [-25.22, -43.94, -39.9, 9.22, 90.43, -21.18],  # C Sorting area
+            [58.18, -42.89, -32.69, -1.31, 89.38, 45.52],  # A Sorting area
+            [100.1, -0.17, -95.0, 11.77, 97.64, -77.87],  # B Sorting area
         ]
 
         # which robot: USB* is m5; ACM* is wio; AMA* is raspi
@@ -117,10 +124,16 @@ class Object_detect():
         time.sleep(3)
 
         # send coordinates to move mycobot
-        self.mc.send_coords([x, y, 250, -173.84, -0.14, -74.37], 100, 1)
+        # self.mc.send_coords([x, y, 250, -173.84, -0.14, -74.37], 100, 1)
+        target1 = [x, y, 250, -173.84, -0.14, -74.37]
+        target1 = limit_coords(target1)  # <-- 自动限位
+        self.mc.send_coords(target1, 100, 1)
         time.sleep(2.5)
 
-        self.mc.send_coords([x, y, 150, -173.84, -0.14, -74.37], 100, 1)
+        # self.mc.send_coords([x, y, 150, -173.84, -0.14, -74.37], 100, 1)
+        target2 = [x, y, 150, -173.84, -0.14, -74.37]
+        target2 = limit_coords(target2)  # <-- 自动限位
+        self.mc.send_coords(target2, 100, 1)
         time.sleep(3)
 
         # open pump
@@ -140,15 +153,15 @@ class Object_detect():
                             25)  # [18.8, -7.91, -54.49, -23.02, -0.79, -14.76]
         time.sleep(3)
 
-        self.mc.send_coords(self.move_coords[color], 100, 1)
-        time.sleep(6.5)
+        self.mc.send_angles(self.move_coords_to_angles[color], 50)
+        time.sleep(2)
 
         # close pump
         self.pump_off()
-        time.sleep(6.5)
+        time.sleep(2)
 
         self.mc.send_angles(self.move_angles[0], 50)
-        time.sleep(4.5)
+        time.sleep(2.5)
 
     # decide whether grab cube 决定是否抓取立方体
     def decide_move(self, x, y, color):
