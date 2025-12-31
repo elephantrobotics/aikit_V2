@@ -153,7 +153,7 @@ class Object_detect():
         time.sleep(2.5)
 
         # self.mc.send_coords([x, y, 150, -173.84, -0.14, -74.37], 100, 1)
-        target2 = [x, y, 150, -173.84, -0.14, -74.37]
+        target2 = [x, y, z, -173.84, -0.14, -74.37]
         target2 = limit_coords(target2)  # <-- 自动限位
         self.mc.send_coords(target2, 100, 1)
         time.sleep(3)
