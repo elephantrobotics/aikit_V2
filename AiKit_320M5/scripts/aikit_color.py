@@ -11,7 +11,7 @@ from pymycobot.mycobot320 import MyCobot320
 from common import limit_coords
 
 IS_CV_4 = cv2.__version__[0] == '4'
-__version__ = "1.0"
+__version__ = "1.0.1"
 
 
 class Object_detect():
@@ -107,7 +107,29 @@ class Object_detect():
         """
         # send Angle to move mycobot320
         print(color)
-        print('x,y:', round(x, 2), round(y, 2))
+        z = 140
+        print('x, y, z:', round(x, 2), round(y, 2), z)
+        if x < 205:
+            print("\033[31m目标点位是自干涉临界点，无法到达，请更换识别物体位置!!!\033[0m")
+            print(
+                "\033[31m target point is a self-interference critical point and cannot be reached. Please change the object location!!!\033[0m")
+            return
+
+        if 205 <= x < 215:
+            x += 5
+            y -= 3
+            z -= 3
+
+        if y < -30:
+            y += 5
+
+        if x > 300:
+            x -= 5
+            y += 5
+
+        if x > 330:
+            z += 10
+        print('real_x, real_y, real_z:', round(x, 2), round(y, 2), z)
 
         self.mc.send_angles(self.move_angles[2], 50)
         time.sleep(3)
@@ -120,7 +142,7 @@ class Object_detect():
         time.sleep(2.5)
 
         # self.mc.send_coords([x, y, 150, -173.84, -0.14, -74.37], 100, 1)
-        target2 = [x, y, 150, -173.84, -0.14, -74.37]
+        target2 = [x, y, z, -173.84, -0.14, -74.37]
         target2 = limit_coords(target2)  # <-- 自动限位
         self.mc.send_coords(target2, 100, 1)
         time.sleep(3)
@@ -167,6 +189,8 @@ class Object_detect():
     # init mycobot320
     def run(self):
         self.mc = MyCobot320(self.plist[0], 115200)
+        self.pump_off()
+        self.mc.set_fresh_mode(0)
         self.mc.send_angles([0.61, 45.87, -92.37, -41.3, 89.56, 9.58], 20)
         time.sleep(2.5)
 

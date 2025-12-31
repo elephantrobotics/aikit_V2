@@ -10,12 +10,12 @@ from pymycobot.mycobot320 import MyCobot320
 from common import limit_coords
 
 IS_CV_4 = cv2.__version__[0] == '4'
-__version__ = "1.0"
+__version__ = "1.0.1"
 
 
 class Object_detect():
 
-    def __init__(self, camera_x=260, camera_y=10):
+    def __init__(self, camera_x=255, camera_y=10):
         # inherit the parent class
         super(Object_detect, self).__init__()
         # declare mycobot320
@@ -90,7 +90,30 @@ class Object_detect():
         :return: None
         """
         print(color)
-        print('x,y:', round(x, 2), round(y, 2))
+        result = None
+        if color == 0:
+            result = 'Circle(圆形)'
+        elif color == 1:
+            result = 'Square(正方形)'
+        elif color == 2:
+            result = 'Rectangle(长方形)'
+        elif color == 3:
+            result = 'Triangle(三角形)'
+
+        print(result)
+        print('x, y:', round(x, 2), round(y, 2))
+        if y > 60:
+            y -= 5
+        if y < -27:
+            y += 10
+        if x > 320:
+            y += 5
+        if x < 215:
+            print("\033[31m目标点位是自干涉临界点，无法到达，请更换识别物体位置!!!\033[0m")
+            print(
+                "\033[31m target point is a self-interference critical point and cannot be reached. Please change the object location!!!\033[0m")
+            return
+        print('real_x, real_y:', round(x, 2), round(y, 2))
         # send Angle to move mycobot320
         self.mc.send_angles(self.move_angles[2], 50)
         time.sleep(3)
@@ -134,7 +157,7 @@ class Object_detect():
 
     # decide whether grab cube
     def decide_move(self, x, y, color):
-        print(x, y, self.cache_x, self.cache_y)
+        # print(x, y, self.cache_x, self.cache_y)
         # detect the cube status move or run
         if (abs(x - self.cache_x) + abs(y - self.cache_y)) / 2 > 5:  # mm
             self.cache_x, self.cache_y = x, y
@@ -147,6 +170,8 @@ class Object_detect():
     # init mycobot320
     def run(self):
         self.mc = MyCobot320(self.plist[0], 115200)
+        self.pump_off()
+        self.mc.set_fresh_mode(0)
         self.mc.send_angles([0.61, 45.87, -92.37, -41.3, 89.56, 9.58], 50)
         time.sleep(2.5)
 
@@ -197,7 +222,7 @@ class Object_detect():
         self.y1 = int(y1)
         self.x2 = int(x2)
         self.y2 = int(y2)
-        print(self.x1, self.y1, self.x2, self.y2)
+        # print(self.x1, self.y1, self.x2, self.y2)
 
     # set parameters to calculate the coords between cube and mycobot320
     def set_params(self, c_x, c_y, ratio):
@@ -230,7 +255,7 @@ class Object_detect():
         if self.x1 != self.x2:
             # the cutting ratio here is adjusted according to the actual situation
             frame = frame[int(self.y2 * 0.78):int(self.y1 * 1.1),
-                    int(self.x1 * 0.88):int(self.x2 * 1.06)]
+                    int(self.x1 * 0.88):int(self.x2 * 1.09)]
         return frame
 
     # 检测物体的形状
@@ -270,11 +295,11 @@ class Object_detect():
                 # if 6000>cv2.contourArea(cnt) and cv2.contourArea(cnt)>4500:
                 if cv2.contourArea(cnt) > 5500:
                     objectType = None
+                    result = None
                     peri = cv2.arcLength(cnt, True)
                     approx = cv2.approxPolyDP(cnt, 0.02 * peri, True)
                     objCor = len(approx)
                     x, y, w, h = cv2.boundingRect(approx)
-                    print('objCor:', objCor)
 
                     boxes = [
                         box
@@ -297,6 +322,7 @@ class Object_detect():
 
                     if objCor == 3:
                         objectType = "Triangle(三角形)"
+                        result = "Triangle"
                         cv2.drawContours(img, [cnt], 0, (0, 0, 255), 3)
                         self.color = 3
                     elif objCor == 4:
@@ -307,19 +333,25 @@ class Object_detect():
                         aspRatio = _W / float(_H)
                         if 0.98 < aspRatio < 1.03:
                             objectType = "Square(正方形)"
+                            result = "Square"
                             cv2.drawContours(img, [cnt], 0, (0, 0, 255), 3)
                             self.color = 1
                         else:
                             objectType = "Rectangle(长方形)"
+                            result = "Rectangle"
                             cv2.drawContours(img, [cnt], 0, (0, 0, 255), 3)
                             self.color = 2
                     elif objCor >= 8:
                         objectType = "Circle(圆形)"
+                        result = "Circle"
                         self.color = 0
                         cv2.drawContours(img, [cnt], 0, (0, 0, 255), 3)
                     else:
                         print('not recognized!')
-                    print(objectType)
+                        result = None
+                    # print(objectType)
+                    cv2.putText(img, result, (x - 50, y), cv2.FONT_HERSHEY_SIMPLEX, 0.6,
+                                (0, 0, 255), 2)
 
         if abs(x) + abs(y) > 0:
             return x, y
