@@ -5,4 +5,4 @@ This module controls the robotic arm movements.
 Author: Wang Weijian
 Date: 2025-11-17
 """
-__version__ = "1.0.1"
+__version__ = "2.0.3"

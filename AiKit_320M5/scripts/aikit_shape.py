@@ -10,7 +10,7 @@ from pymycobot.mycobot320 import MyCobot320
 from common import limit_coords
 
 IS_CV_4 = cv2.__version__[0] == '4'
-__version__ = "1.0.1"
+__version__ = "2.0.3"
 
 
 class Object_detect():
