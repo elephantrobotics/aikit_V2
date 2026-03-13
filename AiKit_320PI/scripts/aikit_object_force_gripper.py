@@ -90,7 +90,7 @@ class Object_detect():
         self.mc.send_coords(target1, 100, 1)
         # self.mc.send_coords([x, y, 203, 176.53, -4.21, 53.28], 100, 1)
         target2 = [x, y,  203, 176.53, -4.21, 53.28]
-        target2 = limit_coords(target1)  # <-- 自动限位
+        target2 = limit_coords(target2)  # <-- 自动限位
         self.mc.send_coords(target2, 100, 1)
         self.check_position(target2, 1)
         # close gripper

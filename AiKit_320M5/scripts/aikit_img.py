@@ -376,8 +376,8 @@ def process_transform_frame(frame, x1, y1, x2, y2):
                        interpolation=cv2.INTER_CUBIC)
     if x1 != x2:
         # the cutting ratio here is adjusted according to the actual situation
-        frame = frame[int(y2 * 0.7):int(y1 * 1.15),
-                int(x1 * 0.7):int(x2 * 1.15)]
+        frame = frame[int(y2 * 0.78):int(y1 * 1.1),
+                int(x1 * 0.86):int(x2 * 1.05)]
     return frame
 
 

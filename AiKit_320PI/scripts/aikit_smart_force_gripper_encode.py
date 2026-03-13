@@ -140,7 +140,7 @@ class Detect_marker():
         # self.mc.send_coords(
         #     [self.home_coords[0] + x, self.home_coords[1] + y, 200, tmp_coords[3], tmp_coords[4], tmp_coords[5]], 100,
         #     1)
-        target2 = [self.home_coords[0] + x, self.home_coords[1] + y, 200, tmp_coords[3], tmp_coords[4], tmp_coords[5]]
+        target2 = [self.home_coords[0] + x, self.home_coords[1] + y, 190, tmp_coords[3], tmp_coords[4], tmp_coords[5]]
         target2 = limit_coords(target2)  # <-- 自动限位
         self.mc.send_coords(target2, 100, 1)
         self.check_position(target2, 1)
