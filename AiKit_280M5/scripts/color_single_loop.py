@@ -94,24 +94,98 @@ class Object_detect():
         # 让5号位停止工作
         self.mc.set_basic_output(5, 1)
 
-    def check_position(self, data, ids):
+    @staticmethod
+    def _angle_diff(a, b):
+        """最短角差（度），兼容姿态角在 ±180 附近跳变。"""
+        return abs((float(a) - float(b) + 180.0) % 360.0 - 180.0)
+
+    def _is_reached(self, current, target, ids, angle_tol=2.0, coord_tol=5.0, orient_tol=5.0):
         """
-        循环检测是否到位某个位置
+        根据反馈自行判断是否到位（不依赖 is_in_position）。
+        关节有虚位时，2°/数毫米容差比固件到位判定更符合真机。
+        :param ids: 0-角度，1-坐标
+        """
+        # get_angles/get_coords 失败时可能返回 -1（int），不能直接 len()
+        if not isinstance(current, (list, tuple)) or len(current) < len(target):
+            return False
+        if ids == 0:
+            return all(
+                self._angle_diff(current[i], target[i]) <= angle_tol
+                for i in range(len(target))
+            )
+        # 坐标：XYZ 用毫米，rx/ry/rz 用角度
+        for i, value in enumerate(target):
+            cur = current[i]
+            if i < 3:
+                if abs(float(cur) - float(value)) > coord_tol:
+                    return False
+            else:
+                if self._angle_diff(cur, value) > orient_tol:
+                    return False
+        return True
+
+    def check_position(
+        self,
+        data,
+        ids,
+        timeout=5.0,
+        angle_tol=2.0,
+        coord_tol=5.0,
+        orient_tol=5.0,
+        stable_count=2,
+    ):
+        """
+        循环检测是否到位某个位置（自判反馈 + 短超时保底）
         :param data: 角度或者坐标
         :param ids: 角度-0，坐标-1
-        :return:
+        :param timeout: 超时时间（秒）
+        :param angle_tol: 关节角到位容差（度），默认 2°，用于吸收虚位
+        :param coord_tol: 坐标 XYZ 到位容差（mm）
+        :param orient_tol: 坐标姿态到位容差（度）
+        :param stable_count: 连续满足容差的次数，避免刚进入误差带就判定
+        :return: True 确认到位；False 超时或查询失败后继续后续流程
         """
         try:
-            while True:
-                res = self.mc.is_in_position(data, ids)
-                # print('res', res)
-                if res == 1:
+            start_time = time.time()
+            ok_count = 0
+            error_count = 0
+            while time.time() - start_time < timeout:
+                current = self.mc.get_angles() if ids == 0 else self.mc.get_coords()
+                if not isinstance(current, (list, tuple)):
+                    error_count += 1
+                    if error_count >= 5:
+                        print("check_position feedback query failed repeatedly, target=", data)
+                        return False
                     time.sleep(0.1)
-                    break
+                    continue
+                error_count = 0
+                if self._is_reached(
+                    current, data, ids,
+                    angle_tol=angle_tol,
+                    coord_tol=coord_tol,
+                    orient_tol=orient_tol,
+                ):
+                    ok_count += 1
+                    if ok_count >= stable_count:
+                        time.sleep(0.15)  # 短暂停稳，消化虚位抖动
+                        return True
+                else:
+                    ok_count = 0
                 time.sleep(0.1)
+            print("check_position timeout, target=", data)
+            return False
         except Exception as e:
             e = traceback.format_exc()
             print(e)
+            return False
+
+            time.sleep(0.1)
+            print("check_position timeout, target=", data)
+            return False
+        except Exception as e:
+            e = traceback.format_exc()
+            print(e)
+            return False
 
     # Grasping motion
     def move(self, x, y, color):
@@ -135,11 +209,16 @@ class Object_detect():
         time.sleep(1.5)
 
         tmp = []
-        while True:
-            if not tmp: 
-                tmp = self.mc.get_angles()    
-            else:
+        start_time = time.time()
+        while time.time() - start_time < 3.0:
+            angles = self.mc.get_angles()
+            if isinstance(angles, (list, tuple)) and angles:
+                tmp = angles
                 break
+            time.sleep(0.1)
+        if not tmp:
+            print("get_angles timeout, use fallback angles")
+            tmp = self.move_angles[1]
         time.sleep(0.5)
         
         # print(tmp)
@@ -343,6 +422,13 @@ class Object_detect():
         
 def color_single():
     import platform
+    # init a class of Object_detect
+    detect = Object_detect()
+    # init mycobot280（先回初始位，避免挡住相机看 ArUco）
+    detect.run()
+    # Control the number of crawls 控制抓取次数
+    count = 0
+
     # open the camera
     if platform.system() == "Windows":
         cap_num = 1
@@ -355,13 +441,6 @@ def color_single():
         cap = cv2.VideoCapture(cap_num, cv2.CAP_V4L)
         if not cap.isOpened():
             cap.open()
-            
-    # init a class of Object_detect
-    detect = Object_detect()
-    # init mycobot280
-    detect.run()
-    # Control the number of crawls 控制抓取次数
-    count = 0
 
     _init_ = 20  
     init_num = 0
@@ -464,6 +543,11 @@ def color_single():
 
 def color_loop():
     import platform
+    # init a class of Object_detect
+    detect = Object_detect()
+    # init mycobot280（先回初始位，避免挡住相机看 ArUco）
+    detect.run()
+
     # open the camera
     if platform.system() == "Windows":
         cap_num = 1
@@ -476,11 +560,6 @@ def color_loop():
         cap = cv2.VideoCapture(cap_num, cv2.CAP_V4L)
         if not cap.isOpened():
             cap.open()
-            
-    # init a class of Object_detect
-    detect = Object_detect()
-    # init mycobot280
-    detect.run()
 
     _init_ = 20  
     init_num = 0
