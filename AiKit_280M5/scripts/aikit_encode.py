@@ -51,11 +51,16 @@ class Detect_marker():
     # 控制吸泵      
     def pub_pump(self, flag):
         if flag:
-            self.mc.set_basic_output(2, 0)
             self.mc.set_basic_output(5, 0)
+            time.sleep(0.05)
         else:
-            self.mc.set_basic_output(2, 1)
             self.mc.set_basic_output(5, 1)
+            time.sleep(0.05)
+            self.mc.set_basic_output(2, 0)
+            time.sleep(1)
+            # 让2号位停止工作
+            self.mc.set_basic_output(2, 1)
+            time.sleep(0.05)
 
     @staticmethod
     def _angle_diff(a, b):
